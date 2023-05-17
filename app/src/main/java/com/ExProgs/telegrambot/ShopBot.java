@@ -42,12 +42,11 @@ public class ShopBot {
             }
         }
         if (update.message() != null) {
-            if (update.message().sticker().setName().contains("MyDeusEx")) {
-                if (update.message().from().id() == admin)
-                    send = new SendMessage(update.message().chat().id(), "admin")
-                            .replyToMessageId(update.message().messageId())
-                            .replyMarkup(keyboard)
-                            .replyMarkup(keyboard1);
+            if (update.message().sticker().setName().contains("MyDeusEx") && update.message().from().id() == admin) {
+                send = new SendMessage(update.message().chat().id(), "admin")
+                        .replyToMessageId(update.message().messageId())
+                        .replyMarkup(keyboard)
+                        .replyMarkup(keyboard1);
             } else if (update.message().photo() != null && update.message().from().id() == admin) {
                 GetFile request = new GetFile(update.message().photo()[4].fileId());
                 GetFileResponse getFileResponse = telegramBot.execute(request);
