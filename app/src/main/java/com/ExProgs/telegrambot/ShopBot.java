@@ -16,8 +16,7 @@ public class ShopBot {
     private final TelegramBot telegramBot;
     private final Update update;
     private final Keyboard keyboard;
-    private final long admin = 861513947;
-    private final String message = "я вас не понимаю(";
+    private final long admin = 861513948;
     private BaseRequest send;
 
     public ShopBot(Update update, TelegramBot telegramBot) {
@@ -27,11 +26,11 @@ public class ShopBot {
                 new InlineKeyboardButton("\uD83D\uDCDD").callbackData("0451"),
                 new InlineKeyboardButton("\uD83D\uDDD1").callbackData("1540"));
         check();
+        send = null;
     }
 
 
     private void check() {
-        send = new SendMessage(update.message().chat().id(), "я вас не понимаю(");
         if (update.callbackQuery() != null) {
             if (update.callbackQuery().from().id() == admin)
                 send = new SendMessage(update.callbackQuery().message().chat().id(), update.callbackQuery().message().text());
@@ -53,6 +52,8 @@ public class ShopBot {
             File file = getFileResponse.file();
             send = new SendPhoto(update.message().chat().id(), file.fileId());
         }
+        if (send==null)
+            send = new SendMessage(update.message().chat().id(), "я вас не понимаю(");
     }
 
     public BaseRequest answer() {
