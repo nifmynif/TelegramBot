@@ -1,19 +1,13 @@
 package com.ExProgs.telegrambot;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.annotation.SuppressLint;
-import android.app.DownloadManager;
-import android.content.Context;
-import android.net.Uri;
 import android.os.Bundle;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
-import com.pengrad.telegrambot.model.File;
-import com.pengrad.telegrambot.request.GetFile;
-import com.pengrad.telegrambot.request.SendPhoto;
-import com.pengrad.telegrambot.response.GetFileResponse;
+
 
 public class MainActivity extends AppCompatActivity {
 
