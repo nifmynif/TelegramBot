@@ -1,71 +1,61 @@
 package com.ExProgs.telegrambot;
 
+import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.File;
-import com.pengrad.telegrambot.model.PhotoSize;
-import com.pengrad.telegrambot.model.Sticker;
-import com.pengrad.telegrambot.model.StickerSet;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
 import com.pengrad.telegrambot.model.request.Keyboard;
+import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.request.GetFile;
 import com.pengrad.telegrambot.request.SendMessage;
-import com.pengrad.telegrambot.request.SendSticker;
-import com.pengrad.telegrambot.request.UploadStickerFile;
+import com.pengrad.telegrambot.request.SendPhoto;
 import com.pengrad.telegrambot.response.GetFileResponse;
 
 public class ShopBot {
+    private final TelegramBot telegramBot;
     private final Update update;
     private final Keyboard keyboard;
-    private Long chatId;
-    private boolean isAdmin;
-    private boolean isSticker;
-    private boolean isCallBackData;
+    private final long admin = 861513947;
     private final String message = "я вас не понимаю(";
+    private BaseRequest send;
 
-    public ShopBot(Update update) {
+    public ShopBot(Update update, TelegramBot telegramBot) {
+        this.telegramBot = telegramBot;
         this.update = update;
         keyboard = new InlineKeyboardMarkup(
                 new InlineKeyboardButton("\uD83D\uDCDD").callbackData("0451"),
                 new InlineKeyboardButton("\uD83D\uDDD1").callbackData("1540"));
-        isAdmin = false;
-        isSticker = false;
-        isCallBackData = false;
         check();
     }
 
 
     private void check() {
+        send = new SendMessage(update.message().chat().id(), "я вас не понимаю(");
         if (update.callbackQuery() != null) {
-            chatId = update.callbackQuery().message().chat().id();
-            isCallBackData = true;
-            if (update.callbackQuery().from().id() == 861513948)
-                isAdmin = true;
-            return;
+            if (update.callbackQuery().from().id() == admin)
+                send = new SendMessage(update.callbackQuery().message().chat().id(), update.callbackQuery().message().text());
         }
         if (update.message().sticker() != null) {
-            chatId = update.message().chat().id();
             if (update.message().sticker().setName().contains("MyDeusEx")) {
-                isSticker = true;
-                if (update.message().from().id() == 861513948)
-                    isAdmin = true;
-            }
-            return;
+                if (update.message().from().id() == admin)
+                    send = new SendMessage(update.message().chat().id(), "admin")
+                            .replyToMessageId(update.message().messageId())
+                            .replyMarkup(keyboard);
+                else
+                    send = new SendMessage(update.message().chat().id(), "user");
+            } else
+                send = new SendMessage(update.message().chat().id(), "я вас не понимаю(");
         }
-        chatId = update.message().chat().id();
+        if (update.message().photo() != null && update.message().from().id() == admin) {
+            GetFile request = new GetFile(update.message().photo()[4].fileId());
+            GetFileResponse getFileResponse = telegramBot.execute(request);
+            File file = getFileResponse.file();
+            send = new SendPhoto(update.message().chat().id(), file.fileId());
+        }
     }
 
-    public SendMessage answer() {
-        if (isSticker)
-            if (isAdmin)
-                return new SendMessage(chatId, "admin").replyMarkup(keyboard).replyToMessageId(update.message().messageId());
-            else
-                return new SendMessage(chatId, "user");
-        if (isCallBackData)
-            if (isAdmin)
-                return new SendMessage(chatId, update.callbackQuery().message().text());
-            else
-                return new SendMessage(chatId, "user");
-        return new SendMessage(chatId, message);
+    public BaseRequest answer() {
+        return send;
     }
 }
