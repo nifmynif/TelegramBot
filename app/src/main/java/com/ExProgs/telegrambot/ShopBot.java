@@ -17,8 +17,9 @@ public class ShopBot {
         this.telegramBot = telegramBot;
     }
 
-    public void setUpdate(Update update) throws IOException {
+    public void setUpdate(Update update, String username) throws IOException {
         this.message = new Message(update);
+        Admin.userName = username;
         if (this.message.getUserName().equals(Admin.userName))
             this.user = new Admin(message.getUserId());
         else
@@ -53,7 +54,7 @@ public class ShopBot {
         return send;
     }
 
-    public TelegramBot getTelegramBot(){
+    public TelegramBot getTelegramBot() {
         return telegramBot;
     }
 }

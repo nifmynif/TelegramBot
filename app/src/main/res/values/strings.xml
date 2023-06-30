@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">TelegramBot</string>
+    <string name="username">Введите username</string>
 </resources>

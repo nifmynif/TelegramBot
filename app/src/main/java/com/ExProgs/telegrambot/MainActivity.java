@@ -2,6 +2,7 @@ package com.ExProgs.telegrambot;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.widget.EditText;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -15,11 +16,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText username =findViewById(R.id.username);
         @SuppressLint({"MissingInflatedId", "LocalSuppress"})
         ShopBot shopBot = new ShopBot(new TelegramBot("6287266463:AAHFzUt2K_kiMZwvaeESt1fyq1rXkDYD3JM"));
         shopBot.getTelegramBot().setUpdatesListener(updates -> {
                     try {
-                        shopBot.setUpdate(updates.get(updates.size() - 1));
+                        shopBot.setUpdate(updates.get(updates.size() - 1), username.getText().toString());
                         shopBot.getTelegramBot().execute(shopBot.answer());
                     } catch (Exception e) {
                         System.out.println(e.getMessage());
