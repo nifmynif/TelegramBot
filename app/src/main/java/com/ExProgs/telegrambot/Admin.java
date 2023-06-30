@@ -6,7 +6,7 @@ import com.pengrad.telegrambot.model.request.KeyboardButton;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
 
 public class Admin extends AbstractUser {
-    public static String userName = "nifmynf";
+    public static String userName = "nifmynif";
 
     public Admin(long id) {
         super(id);
