@@ -31,7 +31,7 @@ public class ShopBot {
     private void check() throws IOException {
         if (message.isCallbackQuery()) {
             if (user.isAdmin() && message.is0451()) {
-                send = new SendMessage(message.getChatId(), "PUKI KAKI");
+                send = new SendMessage(message.getChatId(), "PUKI KAKIf");
             }
         }
         if (message.isMessage()) {
