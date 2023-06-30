@@ -1,69 +1,59 @@
 package com.ExProgs.telegrambot;
 
 import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.model.File;
 import com.pengrad.telegrambot.model.Update;
-import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
-import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
-import com.pengrad.telegrambot.model.request.Keyboard;
-import com.pengrad.telegrambot.model.request.KeyboardButton;
-import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
 import com.pengrad.telegrambot.request.BaseRequest;
-import com.pengrad.telegrambot.request.GetFile;
 import com.pengrad.telegrambot.request.SendMessage;
-import com.pengrad.telegrambot.request.SendPhoto;
-import com.pengrad.telegrambot.response.GetFileResponse;
+
+import java.io.IOException;
 
 public class ShopBot {
     private final TelegramBot telegramBot;
-    private final Update update;
-    private Keyboard keyboard, keyboard1;
-
-    private final long admin = 2016298598;
+    private AbstractUser user;
+    private Message message;
     private BaseRequest send;
 
-    public ShopBot(Update update, TelegramBot telegramBot) {
+    public ShopBot(TelegramBot telegramBot) {
         this.telegramBot = telegramBot;
-        this.update = update;
+    }
 
-        keyboard1 = new ReplyKeyboardMarkup(new KeyboardButton("text")).resizeKeyboard(true);
-        keyboard = new InlineKeyboardMarkup(
-                new InlineKeyboardButton("\uD83D\uDCDD").callbackData("0451"),
-                new InlineKeyboardButton("\uD83D\uDDD1").callbackData("1540"));
+    public void setUpdate(Update update) throws IOException {
+        this.message = new Message(update);
+        if (this.message.getUserName().equals(Admin.userName))
+            this.user = new Admin(message.getUserId());
+        else
+            user = new User(message.getUserId());
         send = null;
         check();
     }
 
 
-    private void check() {
-        if (update.callbackQuery() != null) {
-            if (update.callbackQuery().from().id() == admin && update.callbackQuery().data().contains("0451")) {
-                send = new SendMessage(update.callbackQuery().message().chat().id(), "PUKI KAKI");
+    private void check() throws IOException {
+        if (message.isCallbackQuery()) {
+            if (user.isAdmin() && message.is0451()) {
+                send = new SendMessage(message.getChatId(), "PUKI KAKI");
             }
         }
-        if (update.message() != null) {
-            if (update.message().sticker().setName().contains("MyDeusEx")) {
-                if (update.message().from().id() == admin)
-                    send = new SendMessage(update.message().chat().id(), "admin")
-                            .replyToMessageId(update.message().messageId())
-                            .replyMarkup(keyboard)
-                            .replyMarkup(keyboard1);
-            } else if (update.message().photo() != null && update.message().from().id() == admin) {
-                GetFile request = new GetFile(update.message().photo()[4].fileId());
-                GetFileResponse getFileResponse = telegramBot.execute(request);
-                File file = getFileResponse.file();
-                send = new SendPhoto(update.message().chat().id(), file.fileId());
+        if (message.isMessage()) {
+            if (message.isMySticker()) {
+                if (user.isAdmin())
+                    send = new SendMessage(message.getChatId(), "admin")
+                            .replyToMessageId(message.getMessageId())
+                            .replyMarkup(user.getMessageKeyboard());
+            } else if (message.isPhoto() && user.isAdmin()) {
+                send = message.getPhoto(telegramBot);
             } else
-                send = new SendMessage(update.message().chat().id(), "я вас не понимаю(");
+                send = new SendMessage(message.getChatId(), "я вас не понимаю(");
         }
         if (send == null)
-            if (update.message() != null)
-                send = new SendMessage(update.message().chat().id(), "я вас не понимаю(");
-            else
-                send = new SendMessage(update.callbackQuery().message().chat().id(), "я вас не понимаю(");
+            send = new SendMessage(message.getChatId(), "я вас не понимаю(");
     }
 
     public BaseRequest answer() {
         return send;
+    }
+
+    public TelegramBot getTelegramBot(){
+        return telegramBot;
     }
 }

@@ -16,10 +16,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         @SuppressLint({"MissingInflatedId", "LocalSuppress"})
-        TelegramBot telegramBot = new TelegramBot("6287266463:AAHFzUt2K_kiMZwvaeESt1fyq1rXkDYD3JM");
-        telegramBot.setUpdatesListener(updates -> {
-                    ShopBot shopBot = new ShopBot(updates.get(updates.size() - 1), telegramBot);
-                    telegramBot.execute(shopBot.answer());
+        ShopBot shopBot = new ShopBot(new TelegramBot("6287266463:AAHFzUt2K_kiMZwvaeESt1fyq1rXkDYD3JM"));
+        shopBot.getTelegramBot().setUpdatesListener(updates -> {
+                    try {
+                        shopBot.setUpdate(updates.get(updates.size() - 1));
+                        shopBot.getTelegramBot().execute(shopBot.answer());
+                    } catch (Exception e) {
+                        System.out.println(e.getMessage());
+                    }
                     return UpdatesListener.CONFIRMED_UPDATES_ALL;
                 }
         );
