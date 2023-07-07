@@ -5,11 +5,15 @@ import android.graphics.*;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.GetFile;
-import com.pengrad.telegrambot.request.SendPhoto;
+import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.response.GetFileResponse;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 
 public class Message {
@@ -67,14 +71,21 @@ public class Message {
         return update.message() != null;
     }
 
-    public SendPhoto getPhoto(TelegramBot telegramBot) throws IOException {
+    public SendDocument getPhoto(TelegramBot telegramBot) throws IOException {
         GetFile request = new GetFile(update.message().photo()[update.message().photo().length - 1].fileId());
         GetFileResponse getFileResponse = telegramBot.execute(request);
         URL url = new URL("https://api.telegram.org/file/bot" + telegramBot.getToken() + "/" + getFileResponse.file().filePath());
-        Bitmap originalBitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream());
+        InputStream in = new BufferedInputStream(url.openStream());
+        Bitmap originalBitmap = BitmapFactory.decodeStream(in);
         Bitmap resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, 512, 512, false);
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        resizedBitmap.compress(Bitmap.CompressFormat.PNG, 100, os);
-        return new SendPhoto(getChatId(), os.toByteArray());
+        File tempFile = File.createTempFile("photo", ".png");
+        FileOutputStream fos = new FileOutputStream(tempFile);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        resizedBitmap.compress(Bitmap.CompressFormat.PNG, 100, bos);
+        byte[] bitmapData = bos.toByteArray();
+        fos.write(bitmapData);
+        fos.close();
+        return new SendDocument(getChatId(), tempFile);
     }
+
 }
