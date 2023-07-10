@@ -6,7 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 public class DBHelper {
-    public static int carId;
+    public static int staffId;
     private SQLiteDatabase database;
     private ContentValues contentValues;
     private final JDB jdb;
@@ -45,7 +45,7 @@ public class DBHelper {
     public void addParam(String attrId, String value, String dateValue) {
         database = jdb.getWritableDatabase();
         contentValues = new ContentValues();
-        contentValues.put(JDB.KEY_OBJECT_ID, carId);
+        contentValues.put(JDB.KEY_OBJECT_ID, staffId);
         contentValues.put(JDB.KEY_ATTR_ID, attrId);
         contentValues.put(JDB.KEY_VALUE, value);
         contentValues.put(JDB.KEY_DATE_VALUE, dateValue);

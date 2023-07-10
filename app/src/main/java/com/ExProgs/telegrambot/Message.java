@@ -37,8 +37,8 @@ public class Message {
             return update.message().from().username();
     }
 
-    public boolean is0451() {
-        return update.callbackQuery().data().contains("0451");
+    public boolean isEdit() {
+        return update.callbackQuery().data().substring(7).contains("edit");
     }
 
     public int getMessageId() {
@@ -69,6 +69,12 @@ public class Message {
 
     public boolean isMessage() {
         return update.message() != null;
+    }
+    public boolean hasText() {
+        return !update.message().text().isEmpty();
+    }
+    public String getText() {
+        return update.message().text();
     }
 
     public SendDocument getPhoto(TelegramBot telegramBot) throws IOException {

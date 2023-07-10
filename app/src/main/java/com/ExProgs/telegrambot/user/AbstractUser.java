@@ -1,7 +1,6 @@
-package com.ExProgs.telegrambot;
+package com.ExProgs.telegrambot.user;
 
-import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
-import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
+import com.pengrad.telegrambot.model.request.Keyboard;
 
 public abstract class AbstractUser {
     private long id;
@@ -18,6 +17,6 @@ public abstract class AbstractUser {
     public void setAdmin(boolean admin) {
         isAdmin = admin;
     }
-    public abstract InlineKeyboardMarkup getMessageKeyboard();
-    public abstract ReplyKeyboardMarkup getUserKeyboard();
+    public abstract Keyboard getMessageKeyboard(String id);
+    public abstract Keyboard getUserKeyboard();
 }
