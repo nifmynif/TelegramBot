@@ -31,11 +31,12 @@ public class ShopBot {
         this.message = new Message(update);
         Admin.userName.add(username);
         for (String name : Admin.userName) {
-            if (this.message.getUserName().equals(name)) {
-                this.user = new Admin(message.getUserId());
-                break;
-            } else
-                user = new User(message.getUserId());
+            if (this.message.getUserName() != null)
+                if (this.message.getUserName().equals(name)) {
+                    this.user = new Admin(message.getUserId());
+                    break;
+                } else
+                    user = new User(message.getUserId());
         }
         send = new SendMessage(message.getChatId(), Constants.DEFAULT);
         check();
@@ -62,12 +63,14 @@ public class ShopBot {
                                 .replyMarkup(user.getUserKeyboard());
                         break;
                     case "/add":
-                        dbHelper.addStuff("трусы");
+                        if (user.isAdmin())
+                            dbHelper.addStuff("трусы трусы трусы трусы трусы трусы");
                         break;
                     case "/check":
                         Cursor cursor = dbHelper.getStuffs();
                         if (cursor.moveToFirst())
                             send = new SendMessage(message.getChatId(), cursor.getString(cursor.getColumnIndex(JDB.KEY_NAME)));
+                        cursor.close();
                 }
             }
         }

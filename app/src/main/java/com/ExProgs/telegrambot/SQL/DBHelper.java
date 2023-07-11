@@ -67,7 +67,7 @@ public class DBHelper {
     private void deleteParam(String id) {
         database = jdb.getWritableDatabase();
         contentValues = new ContentValues();
-        database.delete(JDB.TABLE_ATTRIBUTES, JDB.KEY_OBJECT_ID + " = " + id, null);
+        database.delete(JDB.TABLE_PARAMS, JDB.KEY_OBJECT_ID + " = " + id, null);
         database.close();
     }
 }
