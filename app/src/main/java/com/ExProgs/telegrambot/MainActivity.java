@@ -1,12 +1,14 @@
 package com.ExProgs.telegrambot;
 
 import android.annotation.SuppressLint;
+import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -17,7 +19,7 @@ import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.ExProgs.telegrambot.SQL.JDB;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
-
+import com.pengrad.telegrambot.model.Update;
 
 public class MainActivity extends AppCompatActivity {
     private TextView username;
@@ -30,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
         dbHelper = new DBHelper(getApplicationContext());
         username = findViewById(R.id.username);
         createPfbButton();
+        createAddStuffBtn();
         createBot();
         fillTable();
     }
@@ -45,18 +48,24 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void createAddStuffBtn() {
+        Button addStuff = findViewById(R.id.add_stuff);
+        addStuff.setOnClickListener(view -> dialogAdd());
+    }
+
     private void createBot() {
         ShopBot shopBot = new ShopBot(new TelegramBot(getResources().getString(R.string.TBToken)), dbHelper);
         shopBot.getTelegramBot().setUpdatesListener(updates -> {
-                    try {
-                        shopBot.setUpdate(updates.get(updates.size() - 1), username.getText().toString());
-                        shopBot.getTelegramBot().execute(shopBot.answer());
-                    } catch (Exception e) {
-                        System.out.println(e.getMessage());
-                    }
-                    return UpdatesListener.CONFIRMED_UPDATES_ALL;
+            try {
+                for (Update update : updates) {
+                    shopBot.setUpdate(update, username.getText().toString());
+                    shopBot.getTelegramBot().execute(shopBot.answer());
                 }
-        );
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+            return UpdatesListener.CONFIRMED_UPDATES_ALL;
+        });
     }
 
     private void fillTable() {
@@ -77,16 +86,11 @@ public class MainActivity extends AppCompatActivity {
             Button buttonEdit = new Button(this);
             buttonEdit.setText("\uD83D\uDCDD");
             buttonEdit.setId(Integer.parseInt(id));
-            buttonEdit.setOnClickListener(v -> {
-                System.out.println("edit");
-            });
+            buttonEdit.setOnClickListener(v -> dialogEdit(textId.getText().toString()));
             Button buttonDelete = new Button(this);
             buttonDelete.setText("\uD83D\uDDD1");
             buttonDelete.setId(Integer.parseInt(id));
-            buttonDelete.setOnClickListener(v -> {
-                dbHelper.deleteStuff(textId.getText().toString());
-                fillTable();
-            });
+            buttonDelete.setOnClickListener(v -> dialogDel(textId.getText().toString()));
 
             tableRow.addView(textName);
             tableRow.addView(getDivider());
@@ -108,5 +112,98 @@ public class MainActivity extends AppCompatActivity {
         View divider = new View(this);
         divider.setLayoutParams(new TableRow.LayoutParams(50, TableRow.LayoutParams.MATCH_PARENT));
         return divider;
+    }
+
+    private void dialogDel(String id) {
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.dialog_del);
+        Button noBtn = dialog.findViewById(R.id.no);
+        Button yesBtn = dialog.findViewById(R.id.yes);
+        noBtn.setOnClickListener(v -> dialog.dismiss());
+        yesBtn.setOnClickListener(view -> {
+            dbHelper.deleteStuff(id);
+            fillTable();
+            dialog.dismiss();
+        });
+        dialog.show();
+    }
+
+    @SuppressLint("Range")
+    private void dialogEdit(String id) {
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.dialog_edit);
+        Button closeBtn = dialog.findViewById(R.id.close);
+        Button saveBtn = dialog.findViewById(R.id.save);
+        Cursor cursor = dbHelper.getParams(id);
+        EditText stuff_name = dialog.findViewById(R.id.stuff_name);
+        EditText stuff_price = dialog.findViewById(R.id.stuff_price);
+        EditText stuff_description = dialog.findViewById(R.id.stuff_description);
+        EditText stuff_sticker = dialog.findViewById(R.id.stuff_sticker);
+        EditText stuff_num = dialog.findViewById(R.id.stuff_num);
+        while (cursor.moveToNext()) {
+            @SuppressLint("Range") String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
+            @SuppressLint("Range") String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
+            if (attrId.equals("1")) {
+                stuff_name.setText(value);
+                continue;
+            }
+            if (attrId.equals("2")) {
+                stuff_price.setText(value);
+                continue;
+            }
+            if (attrId.equals("3")) {
+                stuff_description.setText(value);
+                continue;
+            }
+            if (attrId.equals("4")) {
+                stuff_sticker.setText(value);
+                continue;
+            }
+            if (attrId.equals("5"))
+                stuff_num.setText(value);
+        }
+        cursor.close();
+        closeBtn.setOnClickListener(v -> dialog.dismiss());
+        saveBtn.setOnClickListener(view -> {
+            dbHelper.addParam(id,
+                   "1",
+                    stuff_name.getText().toString(),
+                    null);
+            dbHelper.addParam(id,
+                    "2",
+                    stuff_price.getText().toString(),
+                    null);
+            dbHelper.addParam(id,
+                    "3",
+                    stuff_description.getText().toString(),
+                    null);
+            dbHelper.addParam(id,
+                   "4",
+                    stuff_sticker.getText().toString(),
+                    null);
+            dbHelper.addParam(id,
+                    "5",
+                    stuff_num.getText().toString(),
+                    null);
+            fillTable();
+            dialog.dismiss();
+        });
+        dialog.show();
+    }
+
+    @SuppressLint("Range")
+    private void dialogAdd() {
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.dialog_add);
+        Button closeBtn = dialog.findViewById(R.id.close);
+        Button saveBtn = dialog.findViewById(R.id.save);
+        EditText stuff_name = dialog.findViewById(R.id.stuff_name);
+        closeBtn.setOnClickListener(v -> dialog.dismiss());
+        saveBtn.setOnClickListener(view -> {
+            dbHelper.addStuff(stuff_name.getText().toString());
+            fillTable();
+            dialog.dismiss();
+        });
+        dialog.show();
     }
 }

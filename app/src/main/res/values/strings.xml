@@ -3,4 +3,15 @@
     <string name="username">вставьте username из буфера</string>
     <string name="TBToken">6287266463:AAHFzUt2K_kiMZwvaeESt1fyq1rXkDYD3JM</string>
     <string name="pfb">pfb</string>
+    <string name="save">save</string>
+    <string name="close">close</string>
+    <string name="no">NO</string>
+    <string name="yes">YES</string>
+    <string name="check_del">Вы уверены что хотите удалить товар?</string>
+    <string name="name">Название</string>
+    <string name="price">Цена</string>
+    <string name="description">Описание</string>
+    <string name="sticker">Стикер</string>
+    <string name="num">Количество</string>
+    <string name="addStuff">+</string>
 </resources>

@@ -6,7 +6,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 public class DBHelper {
-    public static int staffId;
     private SQLiteDatabase database;
     private ContentValues contentValues;
     private final JDB jdb;
@@ -42,15 +41,28 @@ public class DBHelper {
         database.close();
     }
 
-    public void addParam(String attrId, String value, String dateValue) {
+    public void addParam(String id, String attrId, String value, String dateValue) {
         database = jdb.getWritableDatabase();
+        Cursor cursor = database.query(JDB.TABLE_PARAMS,
+                null,
+                JDB.KEY_OBJECT_ID + " = " + id
+                        + " AND " + JDB.KEY_ATTR_ID + " = " + attrId,
+                null,
+                null,
+                null,
+                null);
         contentValues = new ContentValues();
-        contentValues.put(JDB.KEY_OBJECT_ID, staffId);
         contentValues.put(JDB.KEY_ATTR_ID, attrId);
         contentValues.put(JDB.KEY_VALUE, value);
         contentValues.put(JDB.KEY_DATE_VALUE, dateValue);
-        database.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
+        contentValues.put(JDB.KEY_OBJECT_ID, id);
+        if (cursor.getCount() == 0)
+            database.insert(JDB.TABLE_PARAMS, null, contentValues);
+        else
+            database.update(JDB.TABLE_PARAMS, contentValues,
+                    JDB.KEY_OBJECT_ID + " = " + id, null);
         database.close();
+        cursor.close();
     }
 
     public Cursor getParams(String id) {

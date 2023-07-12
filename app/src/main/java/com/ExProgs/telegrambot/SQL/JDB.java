@@ -8,7 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import androidx.annotation.Nullable;
 
 public class JDB extends SQLiteOpenHelper {
-    public static final int DATABASE_VERSION = 3;
+    public static final int DATABASE_VERSION = 7;
     public static final String DATABASE_NAME = "shopDB";
     public static final String TABLE_OBJECTS = "objects";
     public static final String TABLE_ATTRIBUTES = "attributes";
