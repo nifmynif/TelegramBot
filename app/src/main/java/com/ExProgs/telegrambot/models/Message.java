@@ -1,7 +1,8 @@
-package com.ExProgs.telegrambot;
+package com.ExProgs.telegrambot.models;
 
 import android.graphics.*;
 
+import com.ExProgs.telegrambot.constants.Constants;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.GetFile;
@@ -37,8 +38,10 @@ public class Message {
             return update.message().from().username();
     }
 
-    public boolean isEdit() {
-        return update.callbackQuery().data().substring(7).contains("edit");
+    public boolean isInfo() {
+        return update.callbackQuery().data()
+                .substring(update.callbackQuery().data().indexOf('.'))
+                .contains("info");
     }
 
     public int getMessageId() {
@@ -56,11 +59,23 @@ public class Message {
             return update.message().chat().id();
     }
 
-    public boolean isMySticker() {
+    public boolean isSticker() {
         if (isMessage())
+            return (update.message().sticker() != null);
+        else return false;
+    }
+
+    public boolean isMySticker() {
+        return update.message().sticker().setName().contains("MyDeusEx");
+    }
+
+    public String getStickerId() {
+        if (isMessage()) {
             if (update.message().sticker() != null && isMessage())
-                return update.message().sticker().setName().contains("MyDeusEx");
-        return false;
+                return update.message().sticker().fileUniqueId();
+        } else
+            return update.callbackQuery().data().substring(0, update.callbackQuery().data().indexOf("."));
+        return "";
     }
 
     public boolean isCallbackQuery() {
@@ -70,17 +85,19 @@ public class Message {
     public boolean isMessage() {
         return update.message() != null;
     }
+
     public boolean hasText() {
-        return !update.message().text().isEmpty();
+        return update.message().text() != null;
     }
+
     public String getText() {
         return update.message().text();
     }
 
-    public SendDocument getPhoto(TelegramBot telegramBot) throws IOException {
+    public SendDocument getResizePhoto(TelegramBot telegramBot) throws IOException {
         GetFile request = new GetFile(update.message().photo()[update.message().photo().length - 1].fileId());
         GetFileResponse getFileResponse = telegramBot.execute(request);
-        URL url = new URL("https://api.telegram.org/file/bot" + telegramBot.getToken() + "/" + getFileResponse.file().filePath());
+        URL url = new URL(Constants.FILE_API + telegramBot.getToken() + "/" + getFileResponse.file().filePath());
         InputStream in = new BufferedInputStream(url.openStream());
         Bitmap originalBitmap = BitmapFactory.decodeStream(in);
         Bitmap resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, 512, 512, false);
@@ -93,5 +110,4 @@ public class Message {
         fos.close();
         return new SendDocument(getChatId(), tempFile);
     }
-
 }

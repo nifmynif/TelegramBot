@@ -1,4 +1,4 @@
-package com.ExProgs.telegrambot.user;
+package com.ExProgs.telegrambot.models.user;
 
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;

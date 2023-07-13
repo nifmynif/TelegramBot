@@ -1,9 +1,12 @@
 package com.ExProgs.telegrambot.SQL;
 
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+
+import com.ExProgs.telegrambot.models.Product;
 
 public class DBHelper {
     private SQLiteDatabase database;
@@ -20,6 +23,46 @@ public class DBHelper {
         contentValues.put(JDB.KEY_NAME, s);
         database.insert(JDB.TABLE_OBJECTS, null, contentValues);
         database.close();
+    }
+
+    @SuppressLint("Range")
+    public Product getStuff(String id) {
+        @SuppressLint("Recycle") Cursor cursor = jdb.getReadableDatabase()
+                .query(JDB.TABLE_PARAMS,
+                        null,
+                        JDB.KEY_VALUE + " = \"" + id + "\" AND " + JDB.KEY_ATTR_ID + " = 4",
+                        null,
+                        null,
+                        null,
+                        null);
+        cursor.moveToFirst();
+        id = cursor.getString(cursor.getColumnIndex(JDB.KEY_OBJECT_ID));
+        cursor = getParams(id);
+        Product product = new Product(id);
+        while (cursor.moveToNext()) {
+            String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
+            String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
+            if (attrId.equals("1")) {
+                product.setName(value);
+                continue;
+            }
+            if (attrId.equals("2")) {
+                product.setPrice(value);
+                continue;
+            }
+            if (attrId.equals("3")) {
+                product.setDescription(value);
+                continue;
+            }
+            if (attrId.equals("4")) {
+                product.setSticker(value);
+                continue;
+            }
+            if (attrId.equals("5"))
+                product.setNum(value);
+        }
+        cursor.close();
+        return product;
     }
 
     public Cursor getStuffs() {

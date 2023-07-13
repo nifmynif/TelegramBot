@@ -17,6 +17,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.ExProgs.telegrambot.SQL.JDB;
+import com.ExProgs.telegrambot.models.Product;
+import com.ExProgs.telegrambot.models.ShopBot;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
@@ -165,26 +167,13 @@ public class MainActivity extends AppCompatActivity {
         cursor.close();
         closeBtn.setOnClickListener(v -> dialog.dismiss());
         saveBtn.setOnClickListener(view -> {
-            dbHelper.addParam(id,
-                   "1",
-                    stuff_name.getText().toString(),
-                    null);
-            dbHelper.addParam(id,
-                    "2",
-                    stuff_price.getText().toString(),
-                    null);
-            dbHelper.addParam(id,
-                    "3",
-                    stuff_description.getText().toString(),
-                    null);
-            dbHelper.addParam(id,
-                   "4",
-                    stuff_sticker.getText().toString(),
-                    null);
-            dbHelper.addParam(id,
-                    "5",
-                    stuff_num.getText().toString(),
-                    null);
+            Product product = new Product(id);
+            product.setName(stuff_name.getText().toString());
+            product.setPrice(stuff_price.getText().toString());
+            product.setDescription(stuff_description.getText().toString());
+            product.setSticker(stuff_sticker.getText().toString());
+            product.setNum(stuff_num.getText().toString());
+            product.add(dbHelper);
             fillTable();
             dialog.dismiss();
         });

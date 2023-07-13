@@ -1,4 +1,4 @@
-package com.ExProgs.telegrambot.user;
+package com.ExProgs.telegrambot.models.user;
 
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
@@ -22,14 +22,14 @@ public class Admin extends AbstractUser {
 
     public InlineKeyboardMarkup getMessageKeyboard(String id) {
         return new InlineKeyboardMarkup(
-                new InlineKeyboardButton("\uD83D\uDCDD").callbackData(id + ".edit"),
+                new InlineKeyboardButton("\uD83D\uDCDD").callbackData(id + ".info"),
                 new InlineKeyboardButton("\uD83D\uDDD1").callbackData(id + ".delete"));
     }
 
     public ReplyKeyboardMarkup getUserKeyboard() {
-        return new ReplyKeyboardMarkup(new KeyboardButton("/add"),
-                new KeyboardButton("/del"),
-                new KeyboardButton("/check"))
+        return new ReplyKeyboardMarkup(
+                new KeyboardButton("/check")
+        )
                 .resizeKeyboard(true);
     }
 }
