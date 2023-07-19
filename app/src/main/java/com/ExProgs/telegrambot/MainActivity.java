@@ -1,9 +1,10 @@
 package com.ExProgs.telegrambot;
 
 import android.annotation.SuppressLint;
+import android.app.ActivityManager;
 import android.app.Dialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.view.View;
@@ -18,56 +19,37 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.ExProgs.telegrambot.SQL.JDB;
 import com.ExProgs.telegrambot.models.Product;
-import com.ExProgs.telegrambot.models.ShopBot;
-import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.UpdatesListener;
-import com.pengrad.telegrambot.model.Update;
 
 public class MainActivity extends AppCompatActivity {
-    private TextView username;
     private DBHelper dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
         dbHelper = new DBHelper(getApplicationContext());
-        username = findViewById(R.id.username);
-        createPfbButton();
         createAddStuffBtn();
-        createBot();
         fillTable();
+        if (!isServiceRunning(this, TelegramBotService.class)) {
+            Intent serviceIntent = new Intent(this, TelegramBotService.class);
+            startForegroundService(serviceIntent);
+        }
     }
 
-    private void createPfbButton() {
-        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button pfb = findViewById(R.id.pfb);
-        ClipboardManager clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-        pfb.setOnClickListener(view -> {
-            ClipData data = clipboardManager.getPrimaryClip();
-            ClipData.Item item = data.getItemAt(0);
-            String text = item.getText().toString().replaceAll("@", "");
-            username.setText(text);
-        });
+    public boolean isServiceRunning(Context context, Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void createAddStuffBtn() {
         Button addStuff = findViewById(R.id.add_stuff);
         addStuff.setOnClickListener(view -> dialogAdd());
-    }
-
-    private void createBot() {
-        ShopBot shopBot = new ShopBot(new TelegramBot(getResources().getString(R.string.TBToken)), dbHelper);
-        shopBot.getTelegramBot().setUpdatesListener(updates -> {
-            try {
-                for (Update update : updates) {
-                    shopBot.setUpdate(update, username.getText().toString());
-                    shopBot.getTelegramBot().execute(shopBot.answer());
-                }
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-            return UpdatesListener.CONFIRMED_UPDATES_ALL;
-        });
     }
 
     private void fillTable() {

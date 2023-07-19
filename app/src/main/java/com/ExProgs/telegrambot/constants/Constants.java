@@ -10,4 +10,5 @@ public class Constants {
             "\nhttps://t.me/addstickers/MyDeusEx";
     public static String FILE_API="https://api.telegram.org/file/bot";
     public static String NO_STUFF="такого товара еще нет, посмотрите позже";
+    public static String CHANNEL_ID = "i never asked for this";
 }

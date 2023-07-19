@@ -29,9 +29,8 @@ public class ShopBot {
         this.dbHelper = dbHelper;
     }
 
-    public void setUpdate(Update update, String username) throws IOException {
+    public void setUpdate(Update update) throws IOException {
         this.message = new Message(update);
-        Admin.userName.add(username);
         for (String name : Admin.userName) {
             if (this.message.getUserName() != null)
                 if (this.message.getUserName().equals(name)) {
@@ -40,7 +39,6 @@ public class ShopBot {
                 } else
                     user = new User(message.getUserId());
         }
-        Admin.userName.remove(username);
         send = new SendMessage(message.getChatId(), Constants.DEFAULT);
         check();
     }
