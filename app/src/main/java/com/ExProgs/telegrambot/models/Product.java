@@ -33,20 +33,16 @@ public class Product {
     public void add(DBHelper dbHelper) {
         dbHelper.addParam(stuffId,
                 "1",
-                name,
-                null);
+                name);
         dbHelper.addParam(stuffId,
                 "2",
-                price,
-                null);
+                price);
         dbHelper.addParam(stuffId,
                 "3",
-                description,
-                null);
+                description);
         dbHelper.addParam(stuffId,
                 "4",
-                sticker,
-                null);
+                sticker);
     }
 
     public String getStuffId() {

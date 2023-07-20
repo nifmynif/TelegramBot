@@ -32,10 +32,14 @@ public class Message {
     }
 
     public String getUserName() {
+        String username;
         if (isCallbackQuery())
-            return update.callbackQuery().from().username();
+            username = update.callbackQuery().from().username();
         else
-            return update.message().from().username();
+            username = update.message().from().username();
+        if (username == null)
+            throw new IllegalArgumentException(Constants.NULL_USERNAME);
+        return username;
     }
 
     public boolean isInfo() {
@@ -49,11 +53,13 @@ public class Message {
                 .substring(update.callbackQuery().data().indexOf('.'))
                 .contains("delete");
     }
+
     public boolean isYes() {
         return update.callbackQuery().data()
                 .substring(update.callbackQuery().data().indexOf('.'))
                 .contains("yes");
     }
+
     public boolean isNo() {
         return update.callbackQuery().data()
                 .substring(update.callbackQuery().data().indexOf('.'))
@@ -113,6 +119,13 @@ public class Message {
 
     public boolean hasText() {
         return update.message().text() != null;
+    }
+
+    public int getDate() {
+        if (isCallbackQuery())
+            return update.callbackQuery().message().date();
+        else
+            return update.message().date();
     }
 
     public String getText() {
