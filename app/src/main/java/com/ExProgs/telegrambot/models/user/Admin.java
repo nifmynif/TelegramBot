@@ -22,14 +22,14 @@ public class Admin extends AbstractUser {
 
     public InlineKeyboardMarkup getMessageKeyboard(String id) {
         return new InlineKeyboardMarkup(
-                new InlineKeyboardButton("\uD83D\uDCDD").callbackData(id + ".info"),
+                new InlineKeyboardButton("\uD83D\uDC41️").callbackData(id + ".info"),
                 new InlineKeyboardButton("\uD83D\uDDD1").callbackData(id + ".delete"));
     }
 
     public ReplyKeyboardMarkup getUserKeyboard() {
         return new ReplyKeyboardMarkup(
-                new KeyboardButton("/check")
-        )
+                new KeyboardButton("/stuffs"),
+                new KeyboardButton("/orders"))
                 .resizeKeyboard(true);
     }
 }

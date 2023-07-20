@@ -8,9 +8,10 @@ import android.database.sqlite.SQLiteOpenHelper;
 import androidx.annotation.Nullable;
 
 public class JDB extends SQLiteOpenHelper {
-    public static final int DATABASE_VERSION = 9;
+    public static final int DATABASE_VERSION = 11;
     public static final String DATABASE_NAME = "shopDB";
     public static final String TABLE_OBJECTS = "objects";
+    public static final String TABLE_OBJECT_TYPE = "object_type";
     public static final String TABLE_ATTRIBUTES = "attributes";
     public static final String TABLE_ATTRIBUTE_GROUPS = "attribute_groups";
     public static final String TABLE_PARAMS = "params";
@@ -18,6 +19,7 @@ public class JDB extends SQLiteOpenHelper {
     public static final String KEY_NAME = "name";
     public static final String KEY_ATTR_GROUP = "attr_group_id";
     public static final String KEY_OBJECT_ID = "object_id";
+    public static final String KEY_OBJECT_TYPE = "object_type";
     public static final String KEY_ATTR_ID = "attr_id";
     public static final String KEY_VALUE = "value";
     public static final String KEY_DATE_VALUE = "date_value";
@@ -33,6 +35,7 @@ public class JDB extends SQLiteOpenHelper {
         createTableAttributes(db);
         createTableParams(db);
         createTableAttributeGroups(db);
+        createTableObjectType(db);
         setDefault(db);
     }
 
@@ -42,13 +45,16 @@ public class JDB extends SQLiteOpenHelper {
         db.execSQL("drop table if exists " + TABLE_ATTRIBUTES);
         db.execSQL("drop table if exists " + TABLE_PARAMS);
         db.execSQL("drop table if exists " + TABLE_ATTRIBUTE_GROUPS);
+        db.execSQL("drop table if exists " + TABLE_OBJECT_TYPE);
         onCreate(db);
     }
 
     private void createTableObjects(SQLiteDatabase db) {
         db.execSQL("create table " + TABLE_OBJECTS + "("
                 + KEY_ID + " integer primary key,"
-                + KEY_NAME + " text"
+                + KEY_NAME + " text,"
+                + KEY_OBJECT_TYPE + " integer,"
+                + "FOREIGN KEY (" + KEY_OBJECT_TYPE + ") REFERENCES " + TABLE_OBJECT_TYPE + "(" + KEY_ID + ")"
                 + ")");
     }
 
@@ -67,6 +73,12 @@ public class JDB extends SQLiteOpenHelper {
                 + KEY_NAME + " text"
                 + ")");
     }
+    private void createTableObjectType(SQLiteDatabase db) {
+        db.execSQL("create table " + TABLE_OBJECT_TYPE + "("
+                + KEY_ID + " integer primary key AUTOINCREMENT,"
+                + KEY_NAME + " text"
+                + ")");
+    }
 
     private void createTableParams(SQLiteDatabase db) {
         db.execSQL("create table " + TABLE_PARAMS + "("
@@ -81,11 +93,19 @@ public class JDB extends SQLiteOpenHelper {
     }
     private void setDefault(SQLiteDatabase db){
         ContentValues contentValues = new ContentValues();
-        contentValues.put(JDB.KEY_NAME, "Stuff");
+        contentValues.put(JDB.KEY_NAME, "stuff");
         db.insert(JDB.TABLE_ATTRIBUTE_GROUPS, null, contentValues);
         contentValues.clear();
-        contentValues.put(JDB.KEY_NAME, "Query");
+        contentValues.put(JDB.KEY_NAME, "order");
         db.insert(JDB.TABLE_ATTRIBUTE_GROUPS, null, contentValues);
+
+        contentValues.clear();
+        contentValues.put(KEY_NAME, "stuff");
+        db.insert(JDB.TABLE_OBJECT_TYPE, null, contentValues);
+        contentValues.clear();
+        contentValues.put(KEY_NAME, "order");
+        db.insert(JDB.TABLE_OBJECT_TYPE, null, contentValues);
+
         contentValues.clear();
         contentValues.put(KEY_NAME, "name");
         contentValues.put(KEY_ATTR_GROUP, "1");
@@ -98,21 +118,19 @@ public class JDB extends SQLiteOpenHelper {
         contentValues.put(KEY_NAME, "description");
         contentValues.put(KEY_ATTR_GROUP, "1");
         db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
+        contentValues.clear();
         contentValues.put(KEY_NAME, "sticker");
         contentValues.put(KEY_ATTR_GROUP, "1");
         db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
-        contentValues.put(KEY_NAME, "num");
-        contentValues.put(KEY_ATTR_GROUP, "1");
-        db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
+        contentValues.clear();
         contentValues.put(KEY_NAME, "id_stuff");
         contentValues.put(KEY_ATTR_GROUP, "2");
         db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
-        contentValues.put(KEY_NAME, "num");
-        contentValues.put(KEY_ATTR_GROUP, "2");
-        db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
+        contentValues.clear();
         contentValues.put(KEY_NAME, "user");
         contentValues.put(KEY_ATTR_GROUP, "2");
         db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
+        contentValues.clear();
         contentValues.put(KEY_NAME, "pass");
         contentValues.put(KEY_ATTR_GROUP, "2");
         db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);

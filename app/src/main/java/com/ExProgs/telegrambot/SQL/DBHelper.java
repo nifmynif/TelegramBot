@@ -21,6 +21,15 @@ public class DBHelper {
         database = jdb.getWritableDatabase();
         contentValues = new ContentValues();
         contentValues.put(JDB.KEY_NAME, s);
+        contentValues.put(JDB.KEY_OBJECT_TYPE, 1);
+        database.insert(JDB.TABLE_OBJECTS, null, contentValues);
+        database.close();
+    }
+    public void addOrder(String s) {
+        database = jdb.getWritableDatabase();
+        contentValues = new ContentValues();
+        contentValues.put(JDB.KEY_NAME, s);
+        contentValues.put(JDB.KEY_OBJECT_TYPE, 2);
         database.insert(JDB.TABLE_OBJECTS, null, contentValues);
         database.close();
     }
@@ -56,10 +65,7 @@ public class DBHelper {
             }
             if (attrId.equals("4")) {
                 product.setSticker(value);
-                continue;
             }
-            if (attrId.equals("5"))
-                product.setNum(value);
         }
         cursor.close();
         return product;
@@ -69,7 +75,17 @@ public class DBHelper {
         return jdb.getReadableDatabase()
                 .query(JDB.TABLE_OBJECTS,
                         null,
+                        JDB.KEY_OBJECT_TYPE + " = 1",
                         null,
+                        null,
+                        null,
+                        null);
+    }
+    public Cursor getOrders() {
+        return jdb.getReadableDatabase()
+                .query(JDB.TABLE_OBJECTS,
+                        null,
+                        JDB.KEY_OBJECT_TYPE + " = 2",
                         null,
                         null,
                         null,

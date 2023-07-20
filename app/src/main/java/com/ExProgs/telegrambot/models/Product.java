@@ -9,7 +9,6 @@ public class Product {
     private String price;
     private String description;
     private String sticker;
-    private String num;
     private final String stuffId;
 
     public void setName(String name) {
@@ -27,11 +26,6 @@ public class Product {
     public void setSticker(String sticker) {
         this.sticker = sticker;
     }
-
-    public void setNum(String num) {
-        this.num = num;
-    }
-
     public Product(String id) {
         this.stuffId = id;
     }
@@ -53,10 +47,10 @@ public class Product {
                 "4",
                 sticker,
                 null);
-        dbHelper.addParam(stuffId,
-                "5",
-                num,
-                null);
+    }
+
+    public String getStuffId() {
+        return stuffId;
     }
 
     @NonNull
@@ -64,7 +58,6 @@ public class Product {
     public String toString() {
         return "Название: " + name + "\n"
                 + "Цена: " + price + "\n"
-                + "Описание: " + description + "\n"
-                + "Количество: " + num;
+                + "Описание: " + description + "\n";
     }
 }

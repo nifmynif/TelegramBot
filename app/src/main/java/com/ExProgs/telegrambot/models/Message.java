@@ -44,8 +44,33 @@ public class Message {
                 .contains("info");
     }
 
+    public boolean isDelete() {
+        return update.callbackQuery().data()
+                .substring(update.callbackQuery().data().indexOf('.'))
+                .contains("delete");
+    }
+    public boolean isYes() {
+        return update.callbackQuery().data()
+                .substring(update.callbackQuery().data().indexOf('.'))
+                .contains("yes");
+    }
+    public boolean isNo() {
+        return update.callbackQuery().data()
+                .substring(update.callbackQuery().data().indexOf('.'))
+                .contains("no");
+    }
+
+    public boolean isBuy() {
+        return update.callbackQuery().data()
+                .substring(update.callbackQuery().data().indexOf('.'))
+                .contains("buy");
+    }
+
     public int getMessageId() {
-        return update.message().messageId();
+        if (isCallbackQuery())
+            return update.callbackQuery().message().messageId();
+        else
+            return update.message().messageId();
     }
 
     public boolean isPhoto() {

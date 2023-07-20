@@ -11,7 +11,10 @@ import com.ExProgs.telegrambot.models.user.Admin;
 import com.ExProgs.telegrambot.models.user.User;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.Update;
+import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
+import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.BaseRequest;
+import com.pengrad.telegrambot.request.EditMessageText;
 import com.pengrad.telegrambot.request.SendMessage;
 
 import java.io.IOException;
@@ -52,22 +55,59 @@ public class ShopBot {
             else if (message.isPhoto() && user.isAdmin())
                 send = message.getResizePhoto(telegramBot);
         } else if (message.isCallbackQuery()) {
-            if (user.isAdmin() && message.isInfo()) {
-                try {
+            callbackQueryResponse();
+        }
+    }
+
+    private void callbackQueryResponse() {
+        try {
+            if (user.isAdmin()) {
+                if (message.isInfo()) {
+                    product = dbHelper.getStuff(message.getStickerId());
+                    send = new EditMessageText(message.getChatId(),
+                            message.getMessageId(),
+                            product.toString())
+                            .replyMarkup(user.getMessageKeyboard(message.getStickerId()));
+                }
+                if (message.isDelete()) {
+                    product = dbHelper.getStuff(message.getStickerId());
+                    send = new EditMessageText(message.getChatId(),
+                            message.getMessageId(),
+                            "вы точно хотите удалить данный товар?")
+                            .replyMarkup(user.getYesNoKeyboard(message.getStickerId()));
+                }
+                if (message.isYes()) {
+                    product = dbHelper.getStuff(message.getStickerId());
+                    send = new EditMessageText(message.getChatId(),
+                            message.getMessageId(),
+                            "товар удалён")
+                            .replyMarkup(new InlineKeyboardMarkup());
+                    dbHelper.deleteStuff(product.getStuffId());
+                }
+                if (message.isNo()) {
+                    product = dbHelper.getStuff(message.getStickerId());
+                    send = new EditMessageText(message.getChatId(),
+                            message.getMessageId(),
+                            product.toString())
+                            .replyMarkup(user.getMessageKeyboard(message.getStickerId()));
+                }
+            } else {
+                if (message.isBuy()) {
                     product = dbHelper.getStuff(message.getStickerId());
                     send = new SendMessage(message.getChatId(), product.toString());
-                } catch (Exception e) {
-                    send = new SendMessage(message.getChatId(), Constants.NO_STUFF);
                 }
             }
+        } catch (Exception e) {
+            send = new SendMessage(message.getChatId(), Constants.NO_STUFF);
         }
     }
 
     private void stickerResponse() {
         if (message.isMySticker())
             if (user.isAdmin())
-                send = new SendMessage(message.getChatId(), message.getStickerId())
+                send = new SendMessage(message.getChatId(), "`" + message.getStickerId() + "`")
                         .replyToMessageId(message.getMessageId())
+                        .parseMode(ParseMode.Markdown)
                         .replyMarkup(user.getMessageKeyboard(message.getStickerId()));
             else {
                 try {

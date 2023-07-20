@@ -123,7 +123,6 @@ public class MainActivity extends AppCompatActivity {
         EditText stuff_price = dialog.findViewById(R.id.stuff_price);
         EditText stuff_description = dialog.findViewById(R.id.stuff_description);
         EditText stuff_sticker = dialog.findViewById(R.id.stuff_sticker);
-        EditText stuff_num = dialog.findViewById(R.id.stuff_num);
         while (cursor.moveToNext()) {
             @SuppressLint("Range") String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
             @SuppressLint("Range") String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
@@ -141,10 +140,7 @@ public class MainActivity extends AppCompatActivity {
             }
             if (attrId.equals("4")) {
                 stuff_sticker.setText(value);
-                continue;
             }
-            if (attrId.equals("5"))
-                stuff_num.setText(value);
         }
         cursor.close();
         closeBtn.setOnClickListener(v -> dialog.dismiss());
@@ -154,7 +150,6 @@ public class MainActivity extends AppCompatActivity {
             product.setPrice(stuff_price.getText().toString());
             product.setDescription(stuff_description.getText().toString());
             product.setSticker(stuff_sticker.getText().toString());
-            product.setNum(stuff_num.getText().toString());
             product.add(dbHelper);
             fillTable();
             dialog.dismiss();

@@ -1,5 +1,7 @@
 package com.ExProgs.telegrambot.models.user;
 
+import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
+import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
 import com.pengrad.telegrambot.model.request.Keyboard;
 
 public abstract class AbstractUser {
@@ -18,9 +20,17 @@ public abstract class AbstractUser {
         return isAdmin;
     }
 
+    public InlineKeyboardMarkup getYesNoKeyboard(String id) {
+        return new InlineKeyboardMarkup(
+                new InlineKeyboardButton("ДА\uD83E\uDD18️").callbackData(id + ".yes"),
+                new InlineKeyboardButton("НЕТ\uD83D\uDD95").callbackData(id + ".no"));
+    }
+
     public void setAdmin(boolean admin) {
         isAdmin = admin;
     }
-    public abstract Keyboard getMessageKeyboard(String id);
+
+    public abstract InlineKeyboardMarkup getMessageKeyboard(String id);
+
     public abstract Keyboard getUserKeyboard();
 }

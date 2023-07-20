@@ -65,18 +65,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textViewDescription" />
 
-    <TextView
-        android:id="@+id/textViewNum"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="44dp"
-        android:layout_marginEnd="50dp"
-        android:text="@string/num"
-        android:textSize="25sp"
-        app:layout_constraintEnd_toStartOf="@+id/stuff_num"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textViewSticker" />
-
     <EditText
         android:id="@+id/stuff_name"
         android:layout_width="200dp"
@@ -87,7 +75,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/textViewName"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/textViewName"
-        tools:ignore="LabelFor" />
+        tools:ignore="LabelFor,SpeakableTextPresentCheck" />
 
     <EditText
         android:id="@+id/stuff_price"
@@ -99,7 +87,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/textViewPrice"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/textViewPrice"
-        tools:ignore="LabelFor" />
+        tools:ignore="LabelFor,SpeakableTextPresentCheck" />
 
     <EditText
         android:id="@+id/stuff_description"
@@ -111,7 +99,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/textViewDescription"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/textViewDescription"
-        tools:ignore="LabelFor" />
+        tools:ignore="LabelFor,SpeakableTextPresentCheck" />
 
     <EditText
         android:id="@+id/stuff_sticker"
@@ -123,19 +111,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/textViewSticker"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/textViewSticker"
-        tools:ignore="LabelFor" />
-
-    <EditText
-        android:id="@+id/stuff_num"
-        android:layout_width="200dp"
-        android:layout_height="48dp"
-        android:autofillHints=""
-        android:ems="10"
-        android:inputType="text"
-        app:layout_constraintBottom_toBottomOf="@+id/textViewNum"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/textViewNum"
-        tools:ignore="LabelFor" />
+        tools:ignore="LabelFor,SpeakableTextPresentCheck" />
 
     <Button
         android:id="@+id/close"
@@ -145,7 +121,7 @@
         android:text="@string/close"
         app:layout_constraintBottom_toBottomOf="@+id/view"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textViewNum" />
+        app:layout_constraintTop_toBottomOf="@+id/textViewSticker" />
 
     <Button
         android:id="@+id/save"
@@ -155,5 +131,5 @@
         android:text="@string/save"
         app:layout_constraintBottom_toBottomOf="@+id/view"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textViewNum" />
+        app:layout_constraintTop_toBottomOf="@+id/textViewSticker" />
 </androidx.constraintlayout.widget.ConstraintLayout>
