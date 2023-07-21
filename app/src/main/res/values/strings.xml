@@ -14,4 +14,6 @@
     <string name="sticker">Стикер</string>
     <string name="num">Количество</string>
     <string name="addStuff">+</string>
+    <string name="stickerId">id товара</string>
+    <string name="stickerUniqueId">id стикера</string>
 </resources>

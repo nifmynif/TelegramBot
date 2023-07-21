@@ -103,6 +103,14 @@ public class Message {
     public String getStickerId() {
         if (isMessage()) {
             if (update.message().sticker() != null && isMessage())
+                return update.message().sticker().fileId();
+        } else
+            return update.callbackQuery().data().substring(0, update.callbackQuery().data().indexOf("."));
+        return "";
+    }
+    public String getStickerUniqueId() {
+        if (isMessage()) {
+            if (update.message().sticker() != null && isMessage())
                 return update.message().sticker().fileUniqueId();
         } else
             return update.callbackQuery().data().substring(0, update.callbackQuery().data().indexOf("."));

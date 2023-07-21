@@ -46,22 +46,22 @@ public class Order {
         return user;
     }
 
-    public String getSticker() {
-        return sticker;
+    public String getSticker(DBHelper dbHelper) {
+        return dbHelper.getStuffBySticker(sticker).getStickerId();
     }
 
     public void add(DBHelper dbHelper) {
         dbHelper.addParam(orderId,
-                "6",
+                "7",
                 user);
         dbHelper.addParam(orderId,
-                "5",
+                "6",
                 sticker);
         dbHelper.addParam(orderId,
-                "8",
+                "9",
                 date);
         dbHelper.addParam(orderId,
-                "7",
+                "8",
                 pass);
     }
 

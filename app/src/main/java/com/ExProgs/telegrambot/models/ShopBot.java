@@ -35,33 +35,33 @@ public class ShopBot {
     }
 
     public void setUpdate(Update update) throws IOException {
-        this.message = new Message(update);
-        user = new User(message.getUserId());
-        for (String name : Admin.userName) {
-            if (this.message.getUserName() != null)
-                if (this.message.getUserName().equals(name)) {
-                    this.user = new Admin(message.getUserId());
-                    break;
-                }
+        try {
+            this.message = new Message(update);
+            user = new User(message.getUserId());
+            for (String name : Admin.userName) {
+                if (this.message.getUserName() != null)
+                    if (this.message.getUserName().equals(name)) {
+                        this.user = new Admin(message.getUserId());
+                        break;
+                    }
+            }
+            send = new SendMessage(message.getChatId(), Constants.DEFAULT);
+            check();
+        } catch (IllegalArgumentException e) {
+            send = new SendMessage(message.getChatId(), e.getMessage());
         }
-        send = new SendMessage(message.getChatId(), Constants.DEFAULT);
-        check();
     }
 
     private void check() throws IOException {
-        try {
-            if (message.isMessage()) {
-                if (message.isSticker())
-                    stickerResponse();
-                else if (message.hasText())
-                    textResponse(message.getText());
-                else if (message.isPhoto() && user.isAdmin())
-                    send = message.getResizePhoto(telegramBot);
-            } else if (message.isCallbackQuery()) {
-                callbackQueryResponse();
-            }
-        } catch (IllegalArgumentException e) {
-            send = new SendMessage(message.getChatId(), message.getText());
+        if (message.isMessage()) {
+            if (message.isSticker())
+                stickerResponse();
+            else if (message.hasText())
+                textResponse(message.getText());
+            else if (message.isPhoto() && user.isAdmin())
+                send = message.getResizePhoto(telegramBot);
+        } else if (message.isCallbackQuery()) {
+            callbackQueryResponse();
         }
     }
 
@@ -69,44 +69,44 @@ public class ShopBot {
         try {
             if (user.isAdmin()) {
                 if (message.isInfo()) {
-                    product = dbHelper.getStuffBySticker(message.getStickerId());
+                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
                     send = new EditMessageText(message.getChatId(),
                             message.getMessageId(),
                             product.toString())
-                            .replyMarkup(user.getMessageKeyboard(message.getStickerId()));
+                            .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
                 }
                 if (message.isDelete()) {
-                    product = dbHelper.getStuffBySticker(message.getStickerId());
+                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
                     send = new EditMessageText(message.getChatId(),
                             message.getMessageId(),
                             "вы точно хотите удалить данный товар?")
-                            .replyMarkup(user.getYesNoKeyboard(message.getStickerId()));
+                            .replyMarkup(user.getYesNoKeyboard(message.getStickerUniqueId()));
                 }
                 if (message.isYes()) {
-                    product = dbHelper.getStuffBySticker(message.getStickerId());
+                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
                     send = new EditMessageText(message.getChatId(),
                             message.getMessageId(),
                             "товар удалён")
                             .replyMarkup(new InlineKeyboardMarkup());
                     dbHelper.deleteStuff(product.getStuffId());
-                    dbHelper.deleteOrder(dbHelper.getOrderBySticker(message.getStickerId()).getOrderId());
+                    dbHelper.deleteOrder(dbHelper.getOrderBySticker(message.getStickerUniqueId()).getOrderId());
                 }
                 if (message.isNo()) {
-                    product = dbHelper.getStuffBySticker(message.getStickerId());
+                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
                     send = new EditMessageText(message.getChatId(),
                             message.getMessageId(),
                             product.toString())
-                            .replyMarkup(user.getMessageKeyboard(message.getStickerId()));
+                            .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
                 }
             } else {
                 if (message.isBuy()) {
-                    product = dbHelper.getStuffBySticker(message.getStickerId());
-                    dbHelper.addOrder(message.getStickerId());
-                    Order order = dbHelper.getOrderBySticker(message.getStickerId());
+                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
+                    dbHelper.addOrder(message.getStickerUniqueId());
+                    Order order = dbHelper.getOrderBySticker(message.getStickerUniqueId());
                     order.setUser(message.getUserName());
                     order.setDate(message.getDate());
                     order.setPass(Constants.NO);
-                    order.setSticker(message.getStickerId());
+                    order.setSticker(message.getStickerUniqueId());
                     order.add(dbHelper);
                     send = new SendMessage(message.getChatId(), "Хороший выбор! скоро с вами свяжутся для согласования оплаты и выбора дотавки");
                 }
@@ -118,17 +118,24 @@ public class ShopBot {
 
     private void stickerResponse() {
         if (message.isMySticker())
-            if (user.isAdmin())
-                send = new SendMessage(message.getChatId(), "`" + message.getStickerId() + "`")
-                        .replyToMessageId(message.getMessageId())
-                        .parseMode(ParseMode.Markdown)
-                        .replyMarkup(user.getMessageKeyboard(message.getStickerId()));
-            else {
-                try {
-                    product = dbHelper.getStuffBySticker(message.getStickerId());
+            if (user.isAdmin()) {
+                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
+                if (product == null)
+                    send = new SendMessage(message.getChatId(),
+                            "id товара: `" + message.getStickerUniqueId() + "`\n"
+                                    + "id стикера: `" + message.getStickerId() + "`")
+                            .replyToMessageId(message.getMessageId())
+                            .parseMode(ParseMode.Markdown);
+                else
                     send = new SendMessage(message.getChatId(), product.toString())
                             .replyToMessageId(message.getMessageId())
-                            .replyMarkup(user.getMessageKeyboard(message.getStickerId()));
+                            .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
+            } else {
+                try {
+                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
+                    send = new SendMessage(message.getChatId(), product.toString())
+                            .replyToMessageId(message.getMessageId())
+                            .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
                 } catch (Exception e) {
                     send = new SendMessage(message.getChatId(), Constants.NO_STUFF);
                 }
@@ -148,14 +155,18 @@ public class ShopBot {
                 if (user.isAdmin()) {
                     Cursor cursor = dbHelper.getStuffs();
                     StringBuilder result = new StringBuilder();
-                    while (cursor.moveToNext())
-                        result.append("название: ")
-                                .append(cursor.getString(cursor.getColumnIndex(JDB.KEY_NAME)))
-                                .append(" | id: ")
-                                .append(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)))
-                                .append("\n");
+                    if (cursor.getCount() == 0)
+                        send = new SendMessage(message.getChatId(), "нет товаров");
+                    else {
+                        while (cursor.moveToNext())
+                            result.append("название: ")
+                                    .append(cursor.getString(cursor.getColumnIndex(JDB.KEY_NAME)))
+                                    .append(" | id: ")
+                                    .append(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)))
+                                    .append("\n");
+                        send = new SendMessage(message.getChatId(), result.toString());
+                    }
                     cursor.close();
-                    send = new SendMessage(message.getChatId(), result.toString());
                 }
                 break;
             case "/orders":
@@ -170,10 +181,13 @@ public class ShopBot {
                         result.append(order.toStringForAdmin());
                     else
                         result.append(order.toStringForUser());
-                    telegramBot.execute(new SendSticker(message.getChatId(), order.getSticker()));
+                    telegramBot.execute(new SendSticker(message.getChatId(), order.getSticker(dbHelper)));
                     telegramBot.execute(new SendMessage(message.getChatId(), result.toString()));
                 }
-                send = null;
+                if (orders.size() == 0)
+                    send = new SendMessage(message.getChatId(), "нет заказов(");
+                else
+                    send = null;
                 break;
             case "dropdatabase":
             case "/dropdatabase":

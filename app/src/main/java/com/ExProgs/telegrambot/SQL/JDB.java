@@ -8,7 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import androidx.annotation.Nullable;
 
 public class JDB extends SQLiteOpenHelper {
-    public static final int DATABASE_VERSION = 5;
+    public static final int DATABASE_VERSION = 7;
     public static final String DATABASE_NAME = "shopDB";
     public static final String TABLE_OBJECTS = "objects";
     public static final String TABLE_OBJECT_TYPE = "object_type";
@@ -117,11 +117,15 @@ public class JDB extends SQLiteOpenHelper {
         contentValues.put(KEY_ATTR_GROUP, "1");
         db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
         contentValues.clear();
-        contentValues.put(KEY_NAME, "sticker");
+        contentValues.put(KEY_NAME, "stickerId");
         contentValues.put(KEY_ATTR_GROUP, "1");
         db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
         contentValues.clear();
-        contentValues.put(KEY_NAME, "id_stuff");
+        contentValues.put(KEY_NAME, "stickerUniqueId");
+        contentValues.put(KEY_ATTR_GROUP, "1");
+        db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
+        contentValues.clear();
+        contentValues.put(KEY_NAME, "sticker_stuff");
         contentValues.put(KEY_ATTR_GROUP, "2");
         db.insert(JDB.TABLE_ATTRIBUTES, null, contentValues);
         contentValues.clear();

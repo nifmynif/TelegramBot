@@ -18,6 +18,7 @@ public class User extends AbstractUser {
 
     public ReplyKeyboardMarkup getUserKeyboard() {
         return new ReplyKeyboardMarkup(
-                new KeyboardButton("/orders"));
+                new KeyboardButton("/orders"))
+                .resizeKeyboard(true);
     }
 }

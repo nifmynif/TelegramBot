@@ -54,16 +54,28 @@
         app:layout_constraintTop_toBottomOf="@+id/textViewPrice" />
 
     <TextView
-        android:id="@+id/textViewSticker"
+        android:id="@+id/textViewStickerId"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="44dp"
         android:layout_marginEnd="50dp"
-        android:text="@string/sticker"
+        android:text="@string/stickerId"
         android:textSize="25sp"
-        app:layout_constraintEnd_toStartOf="@+id/stuff_sticker"
+        app:layout_constraintEnd_toStartOf="@+id/stuff_sticker_id"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textViewDescription" />
+
+    <TextView
+        android:id="@+id/textViewStickerUniqueId"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="44dp"
+        android:layout_marginEnd="50dp"
+        android:text="@string/stickerUniqueId"
+        android:textSize="25sp"
+        app:layout_constraintEnd_toStartOf="@+id/stuff_sticker_unique_id"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textViewStickerId"  />
 
     <EditText
         android:id="@+id/stuff_name"
@@ -102,15 +114,27 @@
         tools:ignore="LabelFor,SpeakableTextPresentCheck" />
 
     <EditText
-        android:id="@+id/stuff_sticker"
+        android:id="@+id/stuff_sticker_id"
         android:layout_width="200dp"
         android:layout_height="48dp"
         android:autofillHints=""
         android:ems="10"
         android:inputType="text"
-        app:layout_constraintBottom_toBottomOf="@+id/textViewSticker"
+        app:layout_constraintBottom_toBottomOf="@+id/textViewStickerId"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/textViewSticker"
+        app:layout_constraintTop_toTopOf="@+id/textViewStickerId"
+        tools:ignore="LabelFor,SpeakableTextPresentCheck" />
+
+    <EditText
+        android:id="@+id/stuff_sticker_unique_id"
+        android:layout_width="200dp"
+        android:layout_height="48dp"
+        android:autofillHints=""
+        android:ems="10"
+        android:inputType="text"
+        app:layout_constraintBottom_toBottomOf="@+id/textViewStickerUniqueId"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/textViewStickerUniqueId"
         tools:ignore="LabelFor,SpeakableTextPresentCheck" />
 
     <Button
@@ -121,7 +145,7 @@
         android:text="@string/close"
         app:layout_constraintBottom_toBottomOf="@+id/view"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textViewSticker" />
+        app:layout_constraintTop_toBottomOf="@+id/textViewStickerUniqueId" />
 
     <Button
         android:id="@+id/save"
@@ -131,5 +155,5 @@
         android:text="@string/save"
         app:layout_constraintBottom_toBottomOf="@+id/view"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textViewSticker" />
+        app:layout_constraintTop_toBottomOf="@+id/textViewStickerUniqueId" />
 </androidx.constraintlayout.widget.ConstraintLayout>

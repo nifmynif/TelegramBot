@@ -44,32 +44,38 @@ public class DBHelper {
         @SuppressLint("Recycle") Cursor cursor = jdb.getReadableDatabase()
                 .query(JDB.TABLE_PARAMS,
                         null,
-                        JDB.KEY_VALUE + " = \"" + id + "\" AND " + JDB.KEY_ATTR_ID + " = 4",
+                        JDB.KEY_VALUE + " = \"" + id + "\" AND " + JDB.KEY_ATTR_ID + " = 5",
                         null,
                         null,
                         null,
                         null);
-        cursor.moveToFirst();
-        id = cursor.getString(cursor.getColumnIndex(JDB.KEY_OBJECT_ID));
-        cursor = getParams(id);
-        Product product = new Product(id);
-        while (cursor.moveToNext()) {
-            String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
-            String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
-            if (attrId.equals("1")) {
-                product.setName(value);
-                continue;
-            }
-            if (attrId.equals("2")) {
-                product.setPrice(value);
-                continue;
-            }
-            if (attrId.equals("3")) {
-                product.setDescription(value);
-                continue;
-            }
-            if (attrId.equals("4")) {
-                product.setSticker(value);
+        Product product = null;
+        if (cursor.getCount() > 0) {
+            cursor.moveToFirst();
+            id = cursor.getString(cursor.getColumnIndex(JDB.KEY_OBJECT_ID));
+            cursor = getParams(id);
+            product = new Product(id);
+            while (cursor.moveToNext()) {
+                String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
+                String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
+                if (attrId.equals("1")) {
+                    product.setName(value);
+                    continue;
+                }
+                if (attrId.equals("2")) {
+                    product.setPrice(value);
+                    continue;
+                }
+                if (attrId.equals("3")) {
+                    product.setDescription(value);
+                    continue;
+                }
+                if (attrId.equals("4")) {
+                    product.setStickerId(value);
+                    continue;
+                }
+                if (attrId.equals("5"))
+                    product.setStickerUniqueId(value);
             }
         }
         cursor.close();
@@ -93,19 +99,19 @@ public class DBHelper {
         while (cursor.moveToNext()) {
             String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
             String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
-            if (attrId.equals("6")) {
+            if (attrId.equals("7")) {
                 order.setUser(value);
                 continue;
             }
-            if (attrId.equals("8")) {
+            if (attrId.equals("9")) {
                 order.setDate(value);
                 continue;
             }
-            if (attrId.equals("7")) {
+            if (attrId.equals("8")) {
                 order.setPass(value);
                 continue;
             }
-            if (attrId.equals("5")) {
+            if (attrId.equals("6")) {
                 order.setSticker(value);
             }
         }
@@ -156,13 +162,13 @@ public class DBHelper {
         String orderId;
         while (cursor.moveToNext()) {
             orderId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ID));
-            if (getParam(orderId, "7")
+            if (getParam(orderId, "8")
                     .equals(Constants.NO)) {
                 Order order = new Order(orderId);
-                order.setPass(getParam(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)), "7"));
-                order.setDate(getParam(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)), "8"));
-                order.setUser(getParam(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)), "6"));
-                order.setSticker(getParam(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)), "5"));
+                order.setPass(getParam(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)), "8"));
+                order.setDate(getParam(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)), "9"));
+                order.setUser(getParam(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)), "7"));
+                order.setSticker(getParam(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)), "6"));
                 orders.add(order);
             }
         }

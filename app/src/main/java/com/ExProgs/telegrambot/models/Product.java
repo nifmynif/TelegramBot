@@ -8,7 +8,17 @@ public class Product {
     private String name;
     private String price;
     private String description;
-    private String sticker;
+    private String stickerId;
+
+    public String getStickerId() {
+        return stickerId;
+    }
+
+    public void setStickerUniqueId(String stickerUniqueId) {
+        this.stickerUniqueId = stickerUniqueId;
+    }
+
+    private String stickerUniqueId;
     private final String stuffId;
 
     public void setName(String name) {
@@ -23,9 +33,10 @@ public class Product {
         this.description = description;
     }
 
-    public void setSticker(String sticker) {
-        this.sticker = sticker;
+    public void setStickerId(String stickerId) {
+        this.stickerId = stickerId;
     }
+
     public Product(String id) {
         this.stuffId = id;
     }
@@ -42,7 +53,10 @@ public class Product {
                 description);
         dbHelper.addParam(stuffId,
                 "4",
-                sticker);
+                stickerId);
+        dbHelper.addParam(stuffId,
+                "5",
+                stickerUniqueId);
     }
 
     public String getStuffId() {

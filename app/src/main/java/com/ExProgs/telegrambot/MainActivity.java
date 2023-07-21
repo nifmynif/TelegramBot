@@ -121,7 +121,8 @@ public class MainActivity extends AppCompatActivity {
         EditText stuff_name = dialog.findViewById(R.id.stuff_name);
         EditText stuff_price = dialog.findViewById(R.id.stuff_price);
         EditText stuff_description = dialog.findViewById(R.id.stuff_description);
-        EditText stuff_sticker = dialog.findViewById(R.id.stuff_sticker);
+        EditText stuff_sticker_id = dialog.findViewById(R.id.stuff_sticker_id);
+        EditText stuff_sticker_unique_id = dialog.findViewById(R.id.stuff_sticker_unique_id);
         while (cursor.moveToNext()) {
             @SuppressLint("Range") String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
             @SuppressLint("Range") String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
@@ -138,7 +139,10 @@ public class MainActivity extends AppCompatActivity {
                 continue;
             }
             if (attrId.equals("4")) {
-                stuff_sticker.setText(value);
+                stuff_sticker_id.setText(value);
+            }
+            if (attrId.equals("5")) {
+                stuff_sticker_unique_id.setText(value);
             }
         }
         cursor.close();
@@ -148,7 +152,8 @@ public class MainActivity extends AppCompatActivity {
             product.setName(stuff_name.getText().toString());
             product.setPrice(stuff_price.getText().toString());
             product.setDescription(stuff_description.getText().toString());
-            product.setSticker(stuff_sticker.getText().toString());
+            product.setStickerId(stuff_sticker_id.getText().toString());
+            product.setStickerUniqueId(stuff_sticker_unique_id.getText().toString());
             product.add(dbHelper);
             fillTable();
             dialog.dismiss();
