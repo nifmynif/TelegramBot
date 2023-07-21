@@ -66,53 +66,51 @@ public class ShopBot {
     }
 
     private void callbackQueryResponse() {
-        try {
-            if (user.isAdmin()) {
-                if (message.isInfo()) {
-                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
-                    send = new EditMessageText(message.getChatId(),
-                            message.getMessageId(),
-                            product.toString())
-                            .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
-                }
-                if (message.isDelete()) {
-                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
-                    send = new EditMessageText(message.getChatId(),
-                            message.getMessageId(),
-                            "вы точно хотите удалить данный товар?")
-                            .replyMarkup(user.getYesNoKeyboard(message.getStickerUniqueId()));
-                }
-                if (message.isYes()) {
-                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
-                    send = new EditMessageText(message.getChatId(),
-                            message.getMessageId(),
-                            "товар удалён")
-                            .replyMarkup(new InlineKeyboardMarkup());
-                    dbHelper.deleteStuff(product.getStuffId());
-                    dbHelper.deleteOrder(dbHelper.getOrderBySticker(message.getStickerUniqueId()).getOrderId());
-                }
-                if (message.isNo()) {
-                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
-                    send = new EditMessageText(message.getChatId(),
-                            message.getMessageId(),
-                            product.toString())
-                            .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
-                }
-            } else {
-                if (message.isBuy()) {
-                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
-                    dbHelper.addOrder(message.getStickerUniqueId());
-                    Order order = dbHelper.getOrderBySticker(message.getStickerUniqueId());
-                    order.setUser(message.getUserName());
-                    order.setDate(message.getDate());
-                    order.setPass(Constants.NO);
-                    order.setSticker(message.getStickerUniqueId());
-                    order.add(dbHelper);
-                    send = new SendMessage(message.getChatId(), "Хороший выбор! скоро с вами свяжутся для согласования оплаты и выбора дотавки");
-                }
+        if (user.isAdmin()) {
+            if (message.isInfo()) {
+                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
+                send = new EditMessageText(message.getChatId(),
+                        message.getMessageId(),
+                        product.toString())
+                        .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
             }
-        } catch (Exception e) {
-            send = new SendMessage(message.getChatId(), Constants.NO_STUFF);
+            if (message.isDelete()) {
+                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
+                send = new EditMessageText(message.getChatId(),
+                        message.getMessageId(),
+                        "вы точно хотите удалить данный товар?")
+                        .replyMarkup(user.getYesNoKeyboard(message.getStickerUniqueId()));
+            }
+            if (message.isYes()) {
+                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
+                send = new EditMessageText(message.getChatId(),
+                        message.getMessageId(),
+                        "товар удалён")
+                        .replyMarkup(new InlineKeyboardMarkup());
+                Order order = dbHelper.getOrderBySticker(message.getStickerUniqueId());
+                if (order != null)
+                    dbHelper.deleteOrder(order.getOrderId());
+                dbHelper.deleteStuff(product.getStuffId());
+            }
+            if (message.isNo()) {
+                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
+                send = new EditMessageText(message.getChatId(),
+                        message.getMessageId(),
+                        product.toString())
+                        .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
+            }
+        } else {
+            if (message.isBuy()) {
+                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
+                dbHelper.addOrder(message.getStickerUniqueId());
+                Order order = dbHelper.getOrderBySticker(message.getStickerUniqueId());
+                order.setUser(message.getUserName());
+                order.setDate(message.getDate());
+                order.setPass(Constants.NO);
+                order.setSticker(message.getStickerUniqueId());
+                order.add(dbHelper);
+                send = new SendMessage(message.getChatId(), "Хороший выбор! скоро с вами свяжутся для согласования оплаты и выбора дотавки");
+            }
         }
     }
 
@@ -171,12 +169,13 @@ public class ShopBot {
                 break;
             case "/orders":
                 ArrayList<Order> orders;
-                StringBuilder result = new StringBuilder();
+                StringBuilder result;
                 if (user.isAdmin())
                     orders = dbHelper.getOrders();
                 else
                     orders = dbHelper.getUserOrders(message.getUserName());
                 for (Order order : orders) {
+                    result = new StringBuilder();
                     if (user.isAdmin())
                         result.append(order.toStringForAdmin());
                     else

@@ -92,27 +92,30 @@ public class DBHelper {
                         null,
                         null,
                         null);
-        cursor.moveToFirst();
-        id = cursor.getString(cursor.getColumnIndex(JDB.KEY_ID));
-        cursor = getParams(id);
-        Order order = new Order(id);
-        while (cursor.moveToNext()) {
-            String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
-            String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
-            if (attrId.equals("7")) {
-                order.setUser(value);
-                continue;
-            }
-            if (attrId.equals("9")) {
-                order.setDate(value);
-                continue;
-            }
-            if (attrId.equals("8")) {
-                order.setPass(value);
-                continue;
-            }
-            if (attrId.equals("6")) {
-                order.setSticker(value);
+        Order order = null;
+        if (cursor.getCount() > 0) {
+            cursor.moveToFirst();
+            id = cursor.getString(cursor.getColumnIndex(JDB.KEY_ID));
+            cursor = getParams(id);
+            order = new Order(id);
+            while (cursor.moveToNext()) {
+                String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
+                String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
+                if (attrId.equals("7")) {
+                    order.setUser(value);
+                    continue;
+                }
+                if (attrId.equals("9")) {
+                    order.setDate(value);
+                    continue;
+                }
+                if (attrId.equals("8")) {
+                    order.setPass(value);
+                    continue;
+                }
+                if (attrId.equals("6")) {
+                    order.setSticker(value);
+                }
             }
         }
         cursor.close();

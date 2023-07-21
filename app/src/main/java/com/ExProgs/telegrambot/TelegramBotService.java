@@ -34,7 +34,7 @@ public class TelegramBotService extends Service {
                 .setContentText("магазин работает!")
                 .setContentTitle("и делает какуюто фигню...");
 
-        startForeground(451, notification.build());
+        startForeground(1333, notification.build());
 
         ShopBot shopBot = new ShopBot(new TelegramBot(getResources().getString(R.string.TBToken)), dbHelper);
         shopBot.getTelegramBot().setUpdatesListener(updates -> {
