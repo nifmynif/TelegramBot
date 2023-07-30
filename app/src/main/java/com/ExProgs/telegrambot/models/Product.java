@@ -10,6 +10,10 @@ public class Product {
     private String description;
     private String stickerId;
 
+    public String getName() {
+        return name;
+    }
+
     public String getStickerId() {
         return stickerId;
     }

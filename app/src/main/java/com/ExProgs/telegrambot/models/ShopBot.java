@@ -1,10 +1,8 @@
 package com.ExProgs.telegrambot.models;
 
 import android.annotation.SuppressLint;
-import android.database.Cursor;
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
-import com.ExProgs.telegrambot.SQL.JDB;
 import com.ExProgs.telegrambot.constants.Constants;
 import com.ExProgs.telegrambot.models.user.AbstractUser;
 import com.ExProgs.telegrambot.models.user.Admin;
@@ -151,20 +149,16 @@ public class ShopBot {
                 break;
             case "/stuffs":
                 if (user.isAdmin()) {
-                    Cursor cursor = dbHelper.getStuffs();
-                    StringBuilder result = new StringBuilder();
-                    if (cursor.getCount() == 0)
+                    ArrayList<Product> stuffs = dbHelper.getStuffs();
+                    if (stuffs.size() == 0)
                         send = new SendMessage(message.getChatId(), "нет товаров");
                     else {
-                        while (cursor.moveToNext())
-                            result.append("название: ")
-                                    .append(cursor.getString(cursor.getColumnIndex(JDB.KEY_NAME)))
-                                    .append(" | id: ")
-                                    .append(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)))
-                                    .append("\n");
-                        send = new SendMessage(message.getChatId(), result.toString());
+                        send = null;
+                        for (Product product : stuffs) {
+                            telegramBot.execute(new SendSticker(message.getChatId(), product.getStickerId()));
+                            telegramBot.execute(new SendMessage(message.getChatId(), product.toString()));
+                        }
                     }
-                    cursor.close();
                 }
                 break;
             case "/orders":

@@ -20,6 +20,8 @@ import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.ExProgs.telegrambot.SQL.JDB;
 import com.ExProgs.telegrambot.models.Product;
 
+import java.util.ArrayList;
+
 public class MainActivity extends AppCompatActivity {
     private DBHelper dbHelper;
 
@@ -54,25 +56,23 @@ public class MainActivity extends AppCompatActivity {
     private void fillTable() {
         TableLayout tableLayout = findViewById(R.id.table);
         tableLayout.removeAllViews();
-        Cursor cursor = dbHelper.getStuffs();
-        while (cursor.moveToNext()) {
-            @SuppressLint("Range") String name = cursor.getString(cursor.getColumnIndex(JDB.KEY_NAME));
-            @SuppressLint("Range") String id = cursor.getString(cursor.getColumnIndex(JDB.KEY_ID));
+        ArrayList<Product> stuffs = dbHelper.getStuffs();
+        for (Product product : stuffs) {
             TableRow tableRow = new TableRow(this);
             TextView textName = new TextView(this);
-            textName.setText(name);
+            textName.setText(product.getName());
             textName.setTextSize(20);
             textName.setMaxWidth(150);
             TextView textId = new TextView(this);
-            textId.setText(id);
+            textId.setText(product.getStuffId());
             textId.setTextSize(20);
             Button buttonEdit = new Button(this);
             buttonEdit.setText("\uD83D\uDCDD");
-            buttonEdit.setId(Integer.parseInt(id));
+            buttonEdit.setId(Integer.parseInt(product.getStuffId()));
             buttonEdit.setOnClickListener(v -> dialogEdit(textId.getText().toString()));
             Button buttonDelete = new Button(this);
             buttonDelete.setText("\uD83D\uDDD1");
-            buttonDelete.setId(Integer.parseInt(id));
+            buttonDelete.setId(Integer.parseInt(product.getStuffId()));
             buttonDelete.setOnClickListener(v -> dialogDel(textId.getText().toString()));
 
             tableRow.addView(textName);
@@ -88,7 +88,6 @@ public class MainActivity extends AppCompatActivity {
 
             tableLayout.addView(tableRow);
         }
-        cursor.close();
     }
 
     private View getDivider() {

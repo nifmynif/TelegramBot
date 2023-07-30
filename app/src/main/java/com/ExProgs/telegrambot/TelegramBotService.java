@@ -31,8 +31,9 @@ public class TelegramBotService extends Service {
 
         getSystemService(NotificationManager.class).createNotificationChannel(channel);
         Notification.Builder notification = new Notification.Builder(this, Constants.CHANNEL_ID)
-                .setContentText("магазин работает!")
-                .setContentTitle("и делает какуюто фигню...");
+                .setContentTitle("магазин работает!")
+                .setContentText("и делает какуюто фигню...")
+                .setSmallIcon(R.drawable.ic_launcher_background);
 
         startForeground(1333, notification.build());
 
