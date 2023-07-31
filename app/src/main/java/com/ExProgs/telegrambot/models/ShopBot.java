@@ -66,10 +66,34 @@ public class ShopBot {
     private void callbackQueryResponse() {
         if (user.isAdmin()) {
             if (message.isInfo()) {
-                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
+                product = dbHelper.getStuffBySticker(message.getStickerId());
+                    send = new EditMessageText(message.getChatId(),
+                            message.getMessageId(),
+                            "id товара: `" + product.getStickerId() + "`\n"
+                                    + "id стикера: `" + product.getStickerUniqueId() + "`")
+                            .parseMode(ParseMode.Markdown)
+                            .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
+            }
+            if (message.isEditName()) {
+                product = dbHelper.getStuffBySticker(message.getStickerId());
+                send = new EditMessageText(message.getChatId(),
+                        message.getMessageId(), "введите имя")
+                        .replyMarkup(user.getEditKeyboard(message.getStickerUniqueId()));
+            }
+            if (message.isEdit()) {
+                send = new EditMessageText(message.getChatId(),
+                        message.getMessageId(), message.getText())
+                        .replyMarkup(user.getEditKeyboard(message.getStickerUniqueId()));
+            }
+            if (message.isAdd()) {
+                dbHelper.addStuff(message.getStickerId());
+                product = dbHelper.getStuffByName(message.getStickerId());
+                product.setStickerUniqueId(message.getStickerUniqueId());
+                product.setStickerId(message.getStickerId());
+                product.add(dbHelper);
                 send = new EditMessageText(message.getChatId(),
                         message.getMessageId(),
-                        product.toString())
+                        "товар добавлен")
                         .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
             }
             if (message.isDelete()) {
@@ -117,11 +141,9 @@ public class ShopBot {
             if (user.isAdmin()) {
                 product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
                 if (product == null)
-                    send = new SendMessage(message.getChatId(),
-                            "id товара: `" + message.getStickerUniqueId() + "`\n"
-                                    + "id стикера: `" + message.getStickerId() + "`")
+                    send = new SendMessage(message.getChatId(), Constants.NO_STUFF)
                             .replyToMessageId(message.getMessageId())
-                            .parseMode(ParseMode.Markdown);
+                            .replyMarkup(user.getAddButton(message.getStickerUniqueId()));
                 else
                     send = new SendMessage(message.getChatId(), product.toString())
                             .replyToMessageId(message.getMessageId())

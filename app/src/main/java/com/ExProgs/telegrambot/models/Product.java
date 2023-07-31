@@ -9,6 +9,35 @@ public class Product {
     private String price;
     private String description;
     private String stickerId;
+    private String stickerUniqueId;
+    private final String stuffId;
+
+    public Product(String id) {
+        this.stuffId = id;
+    }
+
+    public void add(DBHelper dbHelper) {
+        if (name != null)
+            dbHelper.addParam(stuffId,
+                    "1",
+                    name);
+        if (price != null)
+            dbHelper.addParam(stuffId,
+                    "2",
+                    price);
+        if (description != null)
+            dbHelper.addParam(stuffId,
+                    "3",
+                    description);
+        if (stickerId != null)
+            dbHelper.addParam(stuffId,
+                    "4",
+                    stickerId);
+        if (stickerUniqueId != null)
+            dbHelper.addParam(stuffId,
+                    "5",
+                    stickerUniqueId);
+    }
 
     public String getName() {
         return name;
@@ -26,9 +55,6 @@ public class Product {
         this.stickerUniqueId = stickerUniqueId;
     }
 
-    private String stickerUniqueId;
-    private final String stuffId;
-
     public void setName(String name) {
         this.name = name;
     }
@@ -43,28 +69,6 @@ public class Product {
 
     public void setStickerId(String stickerId) {
         this.stickerId = stickerId;
-    }
-
-    public Product(String id) {
-        this.stuffId = id;
-    }
-
-    public void add(DBHelper dbHelper) {
-        dbHelper.addParam(stuffId,
-                "1",
-                name);
-        dbHelper.addParam(stuffId,
-                "2",
-                price);
-        dbHelper.addParam(stuffId,
-                "3",
-                description);
-        dbHelper.addParam(stuffId,
-                "4",
-                stickerId);
-        dbHelper.addParam(stuffId,
-                "5",
-                stickerUniqueId);
     }
 
     public String getStuffId() {

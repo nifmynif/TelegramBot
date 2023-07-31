@@ -22,7 +22,8 @@ public class Admin extends AbstractUser {
 
     public InlineKeyboardMarkup getMessageKeyboard(String id) {
         return new InlineKeyboardMarkup(
-                new InlineKeyboardButton("\uD83D\uDC41️").callbackData(id + ".info"),
+                new InlineKeyboardButton("\uD83D\uDCBD️").callbackData(id + ".info"),
+                new InlineKeyboardButton("⚒ ️").callbackData(id + ".edit"),
                 new InlineKeyboardButton("\uD83D\uDDD1").callbackData(id + ".delete"));
     }
 

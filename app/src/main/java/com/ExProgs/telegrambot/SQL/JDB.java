@@ -8,13 +8,14 @@ import android.database.sqlite.SQLiteOpenHelper;
 import androidx.annotation.Nullable;
 
 public class JDB extends SQLiteOpenHelper {
-    public static final int DATABASE_VERSION = 12;
+    public static final int DATABASE_VERSION = 14;
     public static final String DATABASE_NAME = "shopDB";
     public static final String TABLE_OBJECTS = "objects";
     public static final String TABLE_OBJECT_TYPE = "object_type";
     public static final String TABLE_ATTRIBUTES = "attributes";
     public static final String TABLE_ATTRIBUTE_GROUPS = "attribute_groups";
     public static final String TABLE_PARAMS = "params";
+    public static final String TABLE_EDIT = "edit";
     public static final String KEY_ID = "_id";
     public static final String KEY_NAME = "name";
     public static final String KEY_ATTR_GROUP = "attr_group_id";
@@ -35,6 +36,7 @@ public class JDB extends SQLiteOpenHelper {
         createTableParams(db);
         createTableAttributeGroups(db);
         createTableObjectType(db);
+        createTableEdit(db);
         setDefault(db);
     }
 
@@ -45,7 +47,18 @@ public class JDB extends SQLiteOpenHelper {
         db.execSQL("drop table if exists " + TABLE_PARAMS);
         db.execSQL("drop table if exists " + TABLE_ATTRIBUTE_GROUPS);
         db.execSQL("drop table if exists " + TABLE_OBJECT_TYPE);
+        db.execSQL("drop table if exists " + TABLE_EDIT);
         onCreate(db);
+    }
+
+    private void createTableEdit(SQLiteDatabase db) {
+        db.execSQL("create table " + TABLE_EDIT + "("
+                + KEY_ID + " integer primary key,"
+                + KEY_OBJECT_ID + " text,"
+                + KEY_ATTR_ID + " integer,"
+                + "FOREIGN KEY (" + KEY_OBJECT_ID + ") REFERENCES " + TABLE_OBJECTS + "(" + KEY_ID + "),"
+                + "FOREIGN KEY (" + KEY_ATTR_ID + ") REFERENCES " + TABLE_ATTRIBUTES + "(" + KEY_ID + ")"
+                + ")");
     }
 
     private void createTableObjects(SQLiteDatabase db) {
@@ -72,6 +85,7 @@ public class JDB extends SQLiteOpenHelper {
                 + KEY_NAME + " text"
                 + ")");
     }
+
     private void createTableObjectType(SQLiteDatabase db) {
         db.execSQL("create table " + TABLE_OBJECT_TYPE + "("
                 + KEY_ID + " integer primary key AUTOINCREMENT,"
@@ -89,7 +103,8 @@ public class JDB extends SQLiteOpenHelper {
                 + "FOREIGN KEY (" + KEY_OBJECT_ID + ") REFERENCES " + TABLE_OBJECTS + "(" + KEY_OBJECT_ID + ")"
                 + ")");
     }
-    private void setDefault(SQLiteDatabase db){
+
+    private void setDefault(SQLiteDatabase db) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(JDB.KEY_NAME, "stuff");
         db.insert(JDB.TABLE_ATTRIBUTE_GROUPS, null, contentValues);

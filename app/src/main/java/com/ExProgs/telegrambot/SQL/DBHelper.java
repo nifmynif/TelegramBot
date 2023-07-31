@@ -11,6 +11,7 @@ import com.ExProgs.telegrambot.models.Order;
 import com.ExProgs.telegrambot.models.Product;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class DBHelper {
     private SQLiteDatabase database;
@@ -52,6 +53,23 @@ public class DBHelper {
         Product product = null;
         while (cursor.moveToNext())
             product = getStuffById(cursor.getString(cursor.getColumnIndex(JDB.KEY_OBJECT_ID)));
+        cursor.close();
+        return product;
+    }
+
+    @SuppressLint({"Range", "Recycle"})
+    public Product getStuffByName(String name) {
+        Cursor cursor = jdb.getReadableDatabase()
+                .query(JDB.TABLE_OBJECTS,
+                        null,
+                        JDB.KEY_NAME + " = \"" + name + "\" AND " + JDB.KEY_OBJECT_TYPE + " = 1",
+                        null,
+                        null,
+                        null,
+                        null);
+        Product product = null;
+        while (cursor.moveToNext())
+            product = getStuffById(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)));
         cursor.close();
         return product;
     }
@@ -118,7 +136,7 @@ public class DBHelper {
     @SuppressLint({"Range", "Recycle"})
     public Order getOrderBySticker(String id) {
         Order order = null;
-        if (id!=null) {
+        if (id != null) {
             Cursor cursor = jdb.getReadableDatabase()
                     .query(JDB.TABLE_OBJECTS,
                             null,
@@ -217,25 +235,16 @@ public class DBHelper {
 
     public void addParam(String id, String attrId, String value) {
         database = jdb.getWritableDatabase();
-        Cursor cursor = database.query(JDB.TABLE_PARAMS,
-                null,
-                JDB.KEY_OBJECT_ID + " = " + id
-                        + " AND " + JDB.KEY_ATTR_ID + " = " + attrId,
-                null,
-                null,
-                null,
-                null);
         contentValues = new ContentValues();
         contentValues.put(JDB.KEY_ATTR_ID, attrId);
         contentValues.put(JDB.KEY_VALUE, value);
         contentValues.put(JDB.KEY_OBJECT_ID, id);
-        if (cursor.getCount() == 0)
+        if (!Objects.equals(getParam(id, attrId), ""))
             database.insert(JDB.TABLE_PARAMS, null, contentValues);
         else
             database.update(JDB.TABLE_PARAMS, contentValues,
                     JDB.KEY_OBJECT_ID + " = " + id, null);
         database.close();
-        cursor.close();
     }
 
     public Cursor getParams(String id) {
@@ -254,5 +263,40 @@ public class DBHelper {
         contentValues = new ContentValues();
         database.delete(JDB.TABLE_PARAMS, JDB.KEY_OBJECT_ID + " = " + id, null);
         database.close();
+    }
+
+    public void addEdit(String objectId, String attrId) {
+        database = jdb.getWritableDatabase();
+        contentValues = new ContentValues();
+        contentValues.put(JDB.KEY_OBJECT_ID, objectId);
+        contentValues.put(JDB.KEY_ATTR_ID, attrId);
+        database.insert(JDB.TABLE_EDIT, null, contentValues);
+        database.close();
+    }
+
+    public void delEdit(String objectId, String attrId) {
+        database = jdb.getWritableDatabase();
+        contentValues = new ContentValues();
+        database.delete(JDB.TABLE_EDIT,
+                JDB.KEY_OBJECT_ID + " = " + objectId + " AND " + JDB.KEY_ATTR_ID + " = " + attrId,
+                null);
+        database.close();
+    }
+
+    @SuppressLint({"Range", "Recycle"})
+    public ArrayList<Product> getEdit(String id) {
+        Cursor cursor = jdb.getReadableDatabase()
+                .query(JDB.TABLE_EDIT,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null);
+        ArrayList<Product> products = new ArrayList<>();
+        while (cursor.moveToNext()) {
+            products.add(getStuffById(cursor.getString(cursor.getColumnIndex(JDB.KEY_OBJECT_ID))));
+        }
+        return products;
     }
 }

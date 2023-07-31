@@ -48,6 +48,36 @@ public class Message {
                 .contains("info");
     }
 
+    public boolean isAdd() {
+        return update.callbackQuery().data()
+                .substring(update.callbackQuery().data().indexOf('.'))
+                .contains("add");
+    }
+
+    public boolean isEdit() {
+        return update.callbackQuery().data()
+                .substring(update.callbackQuery().data().indexOf('.'))
+                .contains("edit");
+    }
+
+    public boolean isEditName() {
+        return update.callbackQuery().data()
+                .substring(update.callbackQuery().data().indexOf('.'))
+                .contains("editName");
+    }
+
+    public boolean isEditPrice() {
+        return update.callbackQuery().data()
+                .substring(update.callbackQuery().data().indexOf('.'))
+                .contains("editPrice");
+    }
+
+    public boolean isEditDescription() {
+        return update.callbackQuery().data()
+                .substring(update.callbackQuery().data().indexOf('.'))
+                .contains("editDescription");
+    }
+
     public boolean isDelete() {
         return update.callbackQuery().data()
                 .substring(update.callbackQuery().data().indexOf('.'))
@@ -104,16 +134,25 @@ public class Message {
         if (isMessage()) {
             if (update.message().sticker() != null && isMessage())
                 return update.message().sticker().fileId();
-        } else
-            return update.callbackQuery().data().substring(0, update.callbackQuery().data().indexOf("."));
+        } else {
+            if (isAdd())
+                return update.callbackQuery().message().replyToMessage().sticker().fileId();
+            else
+                return update.callbackQuery().data().substring(0, update.callbackQuery().data().indexOf("."));
+        }
         return "";
     }
+
     public String getStickerUniqueId() {
         if (isMessage()) {
             if (update.message().sticker() != null && isMessage())
                 return update.message().sticker().fileUniqueId();
-        } else
-            return update.callbackQuery().data().substring(0, update.callbackQuery().data().indexOf("."));
+        } else {
+            if (isAdd())
+                return update.callbackQuery().message().replyToMessage().sticker().fileUniqueId();
+            else
+                return update.callbackQuery().data().substring(0, update.callbackQuery().data().indexOf("."));
+        }
         return "";
     }
 
@@ -137,7 +176,10 @@ public class Message {
     }
 
     public String getText() {
-        return update.message().text();
+        if (isCallbackQuery())
+            return update.callbackQuery().message().text();
+        else
+            return update.message().text();
     }
 
     public SendDocument getResizePhoto(TelegramBot telegramBot) throws IOException {
