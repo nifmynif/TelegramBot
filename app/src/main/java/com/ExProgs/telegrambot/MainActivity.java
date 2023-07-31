@@ -18,6 +18,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.ExProgs.telegrambot.SQL.JDB;
+import com.ExProgs.telegrambot.constants.Constants;
+import com.ExProgs.telegrambot.models.Order;
 import com.ExProgs.telegrambot.models.Product;
 
 import java.util.ArrayList;
@@ -103,7 +105,11 @@ public class MainActivity extends AppCompatActivity {
         Button yesBtn = dialog.findViewById(R.id.yes);
         noBtn.setOnClickListener(v -> dialog.dismiss());
         yesBtn.setOnClickListener(view -> {
-            dbHelper.deleteStuff(id);
+            Product product =dbHelper.getStuffById(id);
+            Order order = dbHelper.getOrderBySticker(product.getStickerUniqueId());
+            if (order != null)
+                dbHelper.deleteOrder(order.getOrderId());
+            dbHelper.deleteStuff(product.getStuffId());
             fillTable();
             dialog.dismiss();
         });
@@ -162,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("Range")
     private void dialogAdd() {
-        Dialog dialog = new Dialog(this);
+        /*Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.dialog_add);
         Button closeBtn = dialog.findViewById(R.id.close);
         Button saveBtn = dialog.findViewById(R.id.save);
@@ -173,6 +179,9 @@ public class MainActivity extends AppCompatActivity {
             fillTable();
             dialog.dismiss();
         });
-        dialog.show();
+        dialog.show();*/
+        dbHelper.addStuff(Constants.CHANNEL_ID);
+        fillTable();
+        //dialog.dismiss();
     }
 }

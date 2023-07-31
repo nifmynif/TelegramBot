@@ -37,7 +37,7 @@ public class TelegramBotService extends Service {
 
         startForeground(1333, notification.build());
 
-        ShopBot shopBot = new ShopBot(new TelegramBot(getResources().getString(R.string.TBToken)), dbHelper);
+        ShopBot shopBot = new ShopBot(new TelegramBot(Constants.TB_TOKEN), dbHelper);
         shopBot.getTelegramBot().setUpdatesListener(updates -> {
             try {
                 for (Update update : updates) {

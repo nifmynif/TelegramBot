@@ -57,7 +57,7 @@ public class DBHelper {
     }
 
     @SuppressLint("Range")
-    private Product getStuffById(String id) {
+    public Product getStuffById(String id) {
         Cursor cursor = getParams(id);
         Product product = new Product(id);
         while (cursor.moveToNext()) {
@@ -117,17 +117,20 @@ public class DBHelper {
 
     @SuppressLint({"Range", "Recycle"})
     public Order getOrderBySticker(String id) {
-        Cursor cursor = jdb.getReadableDatabase()
-                .query(JDB.TABLE_OBJECTS,
-                        null,
-                        JDB.KEY_NAME + " = \"" + id + "\" AND " + JDB.KEY_OBJECT_TYPE + " = 2",
-                        null,
-                        null,
-                        null,
-                        null);
-        cursor.moveToFirst();
-        Order order = getOrderById(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)));
-        cursor.close();
+        Order order = null;
+        if (id!=null) {
+            Cursor cursor = jdb.getReadableDatabase()
+                    .query(JDB.TABLE_OBJECTS,
+                            null,
+                            JDB.KEY_NAME + " = \"" + id + "\" AND " + JDB.KEY_OBJECT_TYPE + " = 2",
+                            null,
+                            null,
+                            null,
+                            null);
+            cursor.moveToFirst();
+            order = getOrderById(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)));
+            cursor.close();
+        }
         return order;
     }
 

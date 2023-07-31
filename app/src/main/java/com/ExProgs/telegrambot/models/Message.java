@@ -97,7 +97,7 @@ public class Message {
     }
 
     public boolean isMySticker() {
-        return update.message().sticker().setName().contains("MyDeusEx");
+        return update.message().sticker().setName().contains(Constants.STICKER_PACK);
     }
 
     public String getStickerId() {

@@ -18,6 +18,10 @@ public class Product {
         return stickerId;
     }
 
+    public String getStickerUniqueId() {
+        return stickerUniqueId;
+    }
+
     public void setStickerUniqueId(String stickerUniqueId) {
         this.stickerUniqueId = stickerUniqueId;
     }

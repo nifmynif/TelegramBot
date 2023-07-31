@@ -11,7 +11,7 @@ public class Admin extends AbstractUser {
     public static ArrayList<String> userName = new ArrayList<>();
 
     static {
-        userName.add("nifmynilf");
+        userName.add("nifmynif");
         userName.add("Zl_Arsuxason");
     }
 
