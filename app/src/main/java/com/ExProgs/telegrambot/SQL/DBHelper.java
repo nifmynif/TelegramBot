@@ -13,9 +13,9 @@ import com.ExProgs.telegrambot.models.Product;
 import java.util.ArrayList;
 
 public class DBHelper {
+    private final JDB jdb;
     private SQLiteDatabase database;
     private ContentValues contentValues;
-    private final JDB jdb;
 
     public DBHelper(Context context) {
         this.jdb = new JDB(context);
@@ -242,7 +242,8 @@ public class DBHelper {
             database.insert(JDB.TABLE_PARAMS, null, contentValues);
         else
             database.update(JDB.TABLE_PARAMS, contentValues,
-                    JDB.KEY_OBJECT_ID + " = " + id, null);
+                    JDB.KEY_OBJECT_ID + " = " + id + " AND " + JDB.KEY_ATTR_ID + " = " + attrId,
+                    null);
         database.close();
     }
 
@@ -273,18 +274,18 @@ public class DBHelper {
         database.close();
     }
 
-    public void delEdit(String objectId, String attrId) {
+    public void delEdit() {
         database = jdb.getWritableDatabase();
         contentValues = new ContentValues();
         database.delete(JDB.TABLE_EDIT,
-                JDB.KEY_OBJECT_ID + " = " + objectId + " AND " + JDB.KEY_ATTR_ID + " = " + attrId,
+                null,
                 null);
         database.close();
     }
 
     @SuppressLint({"Range", "Recycle"})
-    public ArrayList<Product> getEdit(String id) {
-        Cursor cursor = jdb.getReadableDatabase()
+    public Cursor getEdit() {
+        return jdb.getReadableDatabase()
                 .query(JDB.TABLE_EDIT,
                         null,
                         null,
@@ -292,10 +293,5 @@ public class DBHelper {
                         null,
                         null,
                         null);
-        ArrayList<Product> products = new ArrayList<>();
-        while (cursor.moveToNext()) {
-            products.add(getStuffById(cursor.getString(cursor.getColumnIndex(JDB.KEY_OBJECT_ID))));
-        }
-        return products;
     }
 }

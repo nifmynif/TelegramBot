@@ -1,6 +1,7 @@
 package com.ExProgs.telegrambot.models;
 
-import android.graphics.*;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 
 import com.ExProgs.telegrambot.constants.Constants;
 import com.pengrad.telegrambot.TelegramBot;

@@ -19,10 +19,6 @@ public class Order {
         this.orderId = orderId;
     }
 
-    public void setUser(String user) {
-        this.user = user;
-    }
-
     public void setSticker(String sticker) {
         this.sticker = sticker;
     }
@@ -44,6 +40,10 @@ public class Order {
 
     public String getUser() {
         return user;
+    }
+
+    public void setUser(String user) {
+        this.user = user;
     }
 
     public String getSticker(DBHelper dbHelper) {

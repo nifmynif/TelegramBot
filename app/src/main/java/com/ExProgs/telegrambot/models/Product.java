@@ -5,12 +5,12 @@ import androidx.annotation.NonNull;
 import com.ExProgs.telegrambot.SQL.DBHelper;
 
 public class Product {
+    private final String stuffId;
     private String name;
     private String price;
     private String description;
     private String stickerId;
     private String stickerUniqueId;
-    private final String stuffId;
 
     public Product(String id) {
         this.stuffId = id;
@@ -43,8 +43,16 @@ public class Product {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getStickerId() {
         return stickerId;
+    }
+
+    public void setStickerId(String stickerId) {
+        this.stickerId = stickerId;
     }
 
     public String getStickerUniqueId() {
@@ -55,20 +63,12 @@ public class Product {
         this.stickerUniqueId = stickerUniqueId;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public void setPrice(String price) {
         this.price = price;
     }
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public void setStickerId(String stickerId) {
-        this.stickerId = stickerId;
     }
 
     public String getStuffId() {

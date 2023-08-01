@@ -30,7 +30,8 @@ public class Admin extends AbstractUser {
     public ReplyKeyboardMarkup getUserKeyboard() {
         return new ReplyKeyboardMarkup(
                 new KeyboardButton("/stuffs"),
-                new KeyboardButton("/orders"))
+                new KeyboardButton("/orders"),
+                new KeyboardButton("/cancel"))
                 .resizeKeyboard(true);
     }
 }

@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
         Button yesBtn = dialog.findViewById(R.id.yes);
         noBtn.setOnClickListener(v -> dialog.dismiss());
         yesBtn.setOnClickListener(view -> {
-            Product product =dbHelper.getStuffById(id);
+            Product product = dbHelper.getStuffById(id);
             Order order = dbHelper.getOrderBySticker(product.getStickerUniqueId());
             if (order != null)
                 dbHelper.deleteOrder(order.getOrderId());

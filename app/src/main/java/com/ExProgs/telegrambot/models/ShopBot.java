@@ -1,8 +1,10 @@
 package com.ExProgs.telegrambot.models;
 
 import android.annotation.SuppressLint;
+import android.database.Cursor;
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
+import com.ExProgs.telegrambot.SQL.JDB;
 import com.ExProgs.telegrambot.constants.Constants;
 import com.ExProgs.telegrambot.models.user.AbstractUser;
 import com.ExProgs.telegrambot.models.user.Admin;
@@ -21,10 +23,10 @@ import java.util.ArrayList;
 
 public class ShopBot {
     private final TelegramBot telegramBot;
+    private final DBHelper dbHelper;
     private AbstractUser user;
     private Message message;
     private BaseRequest send;
-    private final DBHelper dbHelper;
     private Product product;
 
     public ShopBot(TelegramBot telegramBot, DBHelper dbHelper) {
@@ -82,7 +84,8 @@ public class ShopBot {
             }
             if (message.isEdit()) {
                 send = new EditMessageText(message.getChatId(),
-                        message.getMessageId(), message.getText())
+                        message.getMessageId(),
+                        dbHelper.getStuffBySticker(message.getStickerUniqueId()).toString())
                         .replyMarkup(user.getEditKeyboard(message.getStickerUniqueId()));
             }
             if (message.isAdd()) {
@@ -120,6 +123,27 @@ public class ShopBot {
                         message.getMessageId(),
                         product.toString())
                         .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
+            }
+            if (message.isEditName()) {
+                dbHelper.addEdit(message.getStickerUniqueId(), "1");
+                send = new EditMessageText(message.getChatId(),
+                        message.getMessageId(),
+                        "введите имя товара")
+                        .replyMarkup(new InlineKeyboardMarkup());
+            }
+            if (message.isEditPrice()) {
+                dbHelper.addEdit(message.getStickerUniqueId(), "2");
+                send = new EditMessageText(message.getChatId(),
+                        message.getMessageId(),
+                        "введите цену товара")
+                        .replyMarkup(new InlineKeyboardMarkup());
+            }
+            if (message.isEditDescription()) {
+                dbHelper.addEdit(message.getStickerUniqueId(), "3");
+                send = new EditMessageText(message.getChatId(),
+                        message.getMessageId(),
+                        "введите описание товара")
+                        .replyMarkup(new InlineKeyboardMarkup());
             }
         } else {
             if (message.isBuy()) {
@@ -207,6 +231,10 @@ public class ShopBot {
                 else
                     send = null;
                 break;
+            case "/cancel":
+                dbHelper.delEdit();
+                send = new SendMessage(message.getChatId(), "последняя операция отменена");
+                break;
             case "dropdatabase":
             case "/dropdatabase":
             case "dropDatabase":
@@ -215,6 +243,28 @@ public class ShopBot {
             case "/DropDatabase":
                 send = new SendMessage(message.getChatId(), "хорошая попытка "
                         + message.getUserName() + " >:(");
+            default:
+                if (user.isAdmin()) {
+                    Cursor cursor = dbHelper.getEdit();
+                    while (cursor.moveToNext()) {
+                        product = dbHelper.getStuffBySticker(cursor.getString(cursor.getColumnIndex(JDB.KEY_OBJECT_ID)));
+                        if (cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID)).equals("1")) {
+                            product.setName(text);
+                            dbHelper.delEdit();
+                        }
+                        if (cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID)).equals("2")) {
+                            product.setPrice(text);
+                            dbHelper.delEdit();
+                        }
+                        if (cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID)).equals("3")) {
+                            product.setDescription(text);
+                            dbHelper.delEdit();
+                        }
+                        product.add(dbHelper);
+                        send = new SendMessage(message.getChatId(), "товар обновлён");
+                    }
+                    cursor.close();
+                }
         }
     }
 

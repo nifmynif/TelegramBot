@@ -20,6 +20,10 @@ public abstract class AbstractUser {
         return isAdmin;
     }
 
+    public void setAdmin(boolean admin) {
+        isAdmin = admin;
+    }
+
     public InlineKeyboardMarkup getYesNoKeyboard(String id) {
         return new InlineKeyboardMarkup(
                 new InlineKeyboardButton("ДА\uD83E\uDD18️").callbackData(id + ".yes"),
@@ -30,16 +34,13 @@ public abstract class AbstractUser {
         return new InlineKeyboardMarkup(
                 new InlineKeyboardButton("\uD83D\uDCDB️").callbackData(id + ".editName"),
                 new InlineKeyboardButton("\uD83D\uDCB8").callbackData(id + ".editPrice"),
-                new InlineKeyboardButton("\uD83D\uDCC3").callbackData(id + ".editDescription"));
+                new InlineKeyboardButton("\uD83D\uDCC3").callbackData(id + ".editDescription"),
+                new InlineKeyboardButton("назад").callbackData(id + ".no"));
     }
 
     public InlineKeyboardMarkup getAddButton(String id) {
         return new InlineKeyboardMarkup(
                 new InlineKeyboardButton("\uD83C\uDFAF️").callbackData(id + ".add"));
-    }
-
-    public void setAdmin(boolean admin) {
-        isAdmin = admin;
     }
 
     public abstract InlineKeyboardMarkup getMessageKeyboard(String id);
