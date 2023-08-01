@@ -11,7 +11,6 @@ import com.ExProgs.telegrambot.models.Order;
 import com.ExProgs.telegrambot.models.Product;
 
 import java.util.ArrayList;
-import java.util.Objects;
 
 public class DBHelper {
     private SQLiteDatabase database;
@@ -145,8 +144,8 @@ public class DBHelper {
                             null,
                             null,
                             null);
-            cursor.moveToFirst();
-            order = getOrderById(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)));
+            while (cursor.moveToNext())
+                order = getOrderById(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)));
             cursor.close();
         }
         return order;
@@ -163,7 +162,7 @@ public class DBHelper {
                         null,
                         null,
                         null);
-        String s = "";
+        String s = null;
         while (cursor.moveToNext())
             s = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
         cursor.close();
@@ -239,7 +238,7 @@ public class DBHelper {
         contentValues.put(JDB.KEY_ATTR_ID, attrId);
         contentValues.put(JDB.KEY_VALUE, value);
         contentValues.put(JDB.KEY_OBJECT_ID, id);
-        if (!Objects.equals(getParam(id, attrId), ""))
+        if (getParam(id, attrId) == null)
             database.insert(JDB.TABLE_PARAMS, null, contentValues);
         else
             database.update(JDB.TABLE_PARAMS, contentValues,

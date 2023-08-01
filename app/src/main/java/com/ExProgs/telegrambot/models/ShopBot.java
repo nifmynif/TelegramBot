@@ -67,12 +67,12 @@ public class ShopBot {
         if (user.isAdmin()) {
             if (message.isInfo()) {
                 product = dbHelper.getStuffBySticker(message.getStickerId());
-                    send = new EditMessageText(message.getChatId(),
-                            message.getMessageId(),
-                            "id товара: `" + product.getStickerId() + "`\n"
-                                    + "id стикера: `" + product.getStickerUniqueId() + "`")
-                            .parseMode(ParseMode.Markdown)
-                            .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
+                send = new EditMessageText(message.getChatId(),
+                        message.getMessageId(),
+                        "id товара: `" + product.getStickerId() + "`\n"
+                                + "id стикера: `" + product.getStickerUniqueId() + "`")
+                        .parseMode(ParseMode.Markdown)
+                        .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
             }
             if (message.isEditName()) {
                 product = dbHelper.getStuffBySticker(message.getStickerId());
@@ -123,14 +123,17 @@ public class ShopBot {
             }
         } else {
             if (message.isBuy()) {
-                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
-                dbHelper.addOrder(message.getStickerUniqueId());
                 Order order = dbHelper.getOrderBySticker(message.getStickerUniqueId());
-                order.setUser(message.getUserName());
-                order.setDate(message.getDate());
-                order.setPass(Constants.NO);
-                order.setSticker(message.getStickerUniqueId());
-                order.add(dbHelper);
+                if (order == null || !order.getUser().equals(message.getUserName())) {
+                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
+                    dbHelper.addOrder(message.getStickerUniqueId());
+                    order = dbHelper.getOrderBySticker(message.getStickerUniqueId());
+                    order.setUser(message.getUserName());
+                    order.setDate(message.getDate());
+                    order.setPass(Constants.NO);
+                    order.setSticker(message.getStickerUniqueId());
+                    order.add(dbHelper);
+                }
                 send = new SendMessage(message.getChatId(), "Хороший выбор! скоро с вами свяжутся для согласования оплаты и выбора дотавки");
             }
         }
