@@ -38,7 +38,7 @@ public class ShopBot {
         try {
             this.message = new Message(update);
             user = new User(message.getUserId());
-            for (String name : Admin.userName) {
+            for (String name : Admin.USERNAMES) {
                 if (this.message.getUserName() != null)
                     if (this.message.getUserName().equals(name)) {
                         this.user = new Admin(message.getUserId());
@@ -65,101 +65,106 @@ public class ShopBot {
         }
     }
 
+    private EditMessageText editCurrentMessage(String text, InlineKeyboardMarkup keyboard) {
+        return new EditMessageText(message.getChatId(), message.getMessageId(), text)
+                .replyMarkup(keyboard);
+    }
+
+    private Product getCurrentProduct() {
+        return dbHelper.getStuffBySticker(message.getStickerUniqueId());
+    }
+
     private void callbackQueryResponse() {
         if (user.isAdmin()) {
             if (message.isInfo()) {
-                product = dbHelper.getStuffBySticker(message.getStickerId());
+                product = getCurrentProduct();
+                if (product == null) {
+                    send = editCurrentMessage(Constants.NO_STUFF, new InlineKeyboardMarkup());
+                    return;
+                }
                 send = new EditMessageText(message.getChatId(),
                         message.getMessageId(),
                         "id товара: `" + product.getStickerId() + "`\n"
                                 + "id стикера: `" + product.getStickerUniqueId() + "`")
                         .parseMode(ParseMode.Markdown)
                         .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
-            }
-            if (message.isEditName()) {
-                product = dbHelper.getStuffBySticker(message.getStickerId());
-                send = new EditMessageText(message.getChatId(),
-                        message.getMessageId(), "введите имя")
-                        .replyMarkup(user.getEditKeyboard(message.getStickerUniqueId()));
-            }
-            if (message.isEdit()) {
-                send = new EditMessageText(message.getChatId(),
-                        message.getMessageId(),
-                        dbHelper.getStuffBySticker(message.getStickerUniqueId()).toString())
-                        .replyMarkup(user.getEditKeyboard(message.getStickerUniqueId()));
-            }
-            if (message.isAdd()) {
-                dbHelper.addStuff(message.getStickerId());
-                product = dbHelper.getStuffByName(message.getStickerId());
+            } else if (message.isEdit()) {
+                product = getCurrentProduct();
+                if (product == null) {
+                    send = editCurrentMessage(Constants.NO_STUFF, new InlineKeyboardMarkup());
+                    return;
+                }
+                send = editCurrentMessage(product.toString(), user.getEditKeyboard(message.getStickerUniqueId()));
+            } else if (message.isAdd()) {
+                String productId = dbHelper.addStuff(message.getStickerId());
+                product = new Product(productId);
                 product.setStickerUniqueId(message.getStickerUniqueId());
                 product.setStickerId(message.getStickerId());
                 product.add(dbHelper);
-                send = new EditMessageText(message.getChatId(),
-                        message.getMessageId(),
-                        "товар добавлен")
-                        .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
-            }
-            if (message.isDelete()) {
-                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
-                send = new EditMessageText(message.getChatId(),
-                        message.getMessageId(),
-                        "вы точно хотите удалить данный товар?")
-                        .replyMarkup(user.getYesNoKeyboard(message.getStickerUniqueId()));
-            }
-            if (message.isYes()) {
-                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
-                send = new EditMessageText(message.getChatId(),
-                        message.getMessageId(),
-                        "товар удалён")
-                        .replyMarkup(new InlineKeyboardMarkup());
-                Order order = dbHelper.getOrderBySticker(message.getStickerUniqueId());
-                if (order != null)
-                    dbHelper.deleteOrder(order.getOrderId());
-                dbHelper.deleteStuff(product.getStuffId());
-            }
-            if (message.isNo()) {
-                product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
-                send = new EditMessageText(message.getChatId(),
-                        message.getMessageId(),
-                        product.toString())
-                        .replyMarkup(user.getMessageKeyboard(message.getStickerUniqueId()));
-            }
-            if (message.isEditName()) {
-                dbHelper.addEdit(message.getStickerUniqueId(), "1");
-                send = new EditMessageText(message.getChatId(),
-                        message.getMessageId(),
-                        "введите имя товара")
-                        .replyMarkup(new InlineKeyboardMarkup());
-            }
-            if (message.isEditPrice()) {
-                dbHelper.addEdit(message.getStickerUniqueId(), "2");
-                send = new EditMessageText(message.getChatId(),
-                        message.getMessageId(),
-                        "введите цену товара")
-                        .replyMarkup(new InlineKeyboardMarkup());
-            }
-            if (message.isEditDescription()) {
-                dbHelper.addEdit(message.getStickerUniqueId(), "3");
-                send = new EditMessageText(message.getChatId(),
-                        message.getMessageId(),
-                        "введите описание товара")
-                        .replyMarkup(new InlineKeyboardMarkup());
-            }
-        } else {
-            if (message.isBuy()) {
-                Order order = dbHelper.getOrderBySticker(message.getStickerUniqueId());
-                if (order == null || !order.getUser().equals(message.getUserName())) {
-                    product = dbHelper.getStuffBySticker(message.getStickerUniqueId());
-                    dbHelper.addOrder(message.getStickerUniqueId());
-                    order = dbHelper.getOrderBySticker(message.getStickerUniqueId());
-                    order.setUser(message.getUserName());
-                    order.setDate(message.getDate());
-                    order.setPass(Constants.NO);
-                    order.setSticker(message.getStickerUniqueId());
-                    order.add(dbHelper);
+                send = editCurrentMessage("товар добавлен", user.getMessageKeyboard(message.getStickerUniqueId()));
+            } else if (message.isDelete()) {
+                product = getCurrentProduct();
+                if (product == null) {
+                    send = editCurrentMessage(Constants.NO_STUFF, new InlineKeyboardMarkup());
+                    return;
                 }
-                send = new SendMessage(message.getChatId(), "Хороший выбор! скоро с вами свяжутся для согласования оплаты и выбора дотавки");
+                send = editCurrentMessage("вы точно хотите удалить данный товар?",
+                        user.getYesNoKeyboard(message.getStickerUniqueId()));
+            } else if (message.isYes()) {
+                product = getCurrentProduct();
+                if (product == null) {
+                    send = editCurrentMessage(Constants.NO_STUFF, new InlineKeyboardMarkup());
+                    return;
+                }
+                send = editCurrentMessage("товар удалён", new InlineKeyboardMarkup());
+                dbHelper.deleteOrdersBySticker(message.getStickerUniqueId());
+                dbHelper.deleteStuff(product.getStuffId());
+            } else if (message.isNo()) {
+                product = getCurrentProduct();
+                if (product == null) {
+                    send = editCurrentMessage(Constants.NO_STUFF, new InlineKeyboardMarkup());
+                    return;
+                }
+                send = editCurrentMessage(product.toString(), user.getMessageKeyboard(message.getStickerUniqueId()));
+            } else if (message.isEditName()) {
+                if (getCurrentProduct() == null) {
+                    send = editCurrentMessage(Constants.NO_STUFF, new InlineKeyboardMarkup());
+                    return;
+                }
+                dbHelper.addEdit(message.getStickerUniqueId(), "1");
+                send = editCurrentMessage("введите имя товара", new InlineKeyboardMarkup());
+            } else if (message.isEditPrice()) {
+                if (getCurrentProduct() == null) {
+                    send = editCurrentMessage(Constants.NO_STUFF, new InlineKeyboardMarkup());
+                    return;
+                }
+                dbHelper.addEdit(message.getStickerUniqueId(), "2");
+                send = editCurrentMessage("введите цену товара", new InlineKeyboardMarkup());
+            } else if (message.isEditDescription()) {
+                if (getCurrentProduct() == null) {
+                    send = editCurrentMessage(Constants.NO_STUFF, new InlineKeyboardMarkup());
+                    return;
+                }
+                dbHelper.addEdit(message.getStickerUniqueId(), "3");
+                send = editCurrentMessage("введите описание товара", new InlineKeyboardMarkup());
             }
+        } else if (message.isBuy()) {
+            product = getCurrentProduct();
+            if (product == null) {
+                send = new SendMessage(message.getChatId(), Constants.NO_STUFF);
+                return;
+            }
+            Order order = dbHelper.getOrderByStickerAndUser(message.getStickerUniqueId(), message.getUserName());
+            if (order == null) {
+                String orderId = dbHelper.addOrder(message.getStickerUniqueId());
+                order = new Order(orderId);
+                order.setUser(message.getUserName());
+                order.setDate(message.getDate());
+                order.setPass(Constants.NO);
+                order.setSticker(message.getStickerUniqueId());
+                order.add(dbHelper);
+            }
+            send = new SendMessage(message.getChatId(), "Хороший выбор! скоро с вами свяжутся для согласования оплаты и выбора дотавки");
         }
     }
 
@@ -243,6 +248,7 @@ public class ShopBot {
             case "/DropDatabase":
                 send = new SendMessage(message.getChatId(), "хорошая попытка "
                         + message.getUserName() + " >:(");
+                break;
             default:
                 if (user.isAdmin()) {
                     Cursor cursor = dbHelper.getEdit();

@@ -2,6 +2,13 @@ plugins {
     id 'com.android.application'
 }
 
+def resolveConfigValue = { String name, String defaultValue = "" ->
+    def value = providers.gradleProperty(name)
+            .orElse(providers.environmentVariable(name))
+            .getOrElse(defaultValue)
+    return value.replace("\\", "\\\\").replace("\"", "\\\"")
+}
+
 android {
     namespace 'com.ExProgs.telegrambot'
     compileSdk 33
@@ -13,6 +20,13 @@ android {
         versionCode 2
         versionName "2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField "String", "TELEGRAM_BOT_TOKEN", "\"${resolveConfigValue("TELEGRAM_BOT_TOKEN")}\""
+        buildConfigField "String", "STICKER_PACK", "\"${resolveConfigValue("STICKER_PACK", "MyDeusEx")}\""
+        buildConfigField "String", "ADMIN_USERNAMES", "\"${resolveConfigValue("ADMIN_USERNAMES")}\""
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {

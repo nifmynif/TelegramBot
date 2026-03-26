@@ -43,64 +43,74 @@ public class Message {
         return username;
     }
 
+    private boolean hasCallbackAction(String action) {
+        return action.equals(getCallbackAction());
+    }
+
+    private String getCallbackAction() {
+        if (!isCallbackQuery()) {
+            return "";
+        }
+
+        String data = update.callbackQuery().data();
+        int separatorIndex = data.indexOf('.');
+        if (separatorIndex < 0 || separatorIndex == data.length() - 1) {
+            return data;
+        }
+        return data.substring(separatorIndex + 1);
+    }
+
+    private String getCallbackStickerValue() {
+        if (!isCallbackQuery()) {
+            return "";
+        }
+
+        String data = update.callbackQuery().data();
+        int separatorIndex = data.indexOf('.');
+        if (separatorIndex <= 0) {
+            return "";
+        }
+        return data.substring(0, separatorIndex);
+    }
+
     public boolean isInfo() {
-        return update.callbackQuery().data()
-                .substring(update.callbackQuery().data().indexOf('.'))
-                .contains("info");
+        return hasCallbackAction("info");
     }
 
     public boolean isAdd() {
-        return update.callbackQuery().data()
-                .substring(update.callbackQuery().data().indexOf('.'))
-                .contains("add");
+        return hasCallbackAction("add");
     }
 
     public boolean isEdit() {
-        return update.callbackQuery().data()
-                .substring(update.callbackQuery().data().indexOf('.'))
-                .contains("edit");
+        return hasCallbackAction("edit");
     }
 
     public boolean isEditName() {
-        return update.callbackQuery().data()
-                .substring(update.callbackQuery().data().indexOf('.'))
-                .contains("editName");
+        return hasCallbackAction("editName");
     }
 
     public boolean isEditPrice() {
-        return update.callbackQuery().data()
-                .substring(update.callbackQuery().data().indexOf('.'))
-                .contains("editPrice");
+        return hasCallbackAction("editPrice");
     }
 
     public boolean isEditDescription() {
-        return update.callbackQuery().data()
-                .substring(update.callbackQuery().data().indexOf('.'))
-                .contains("editDescription");
+        return hasCallbackAction("editDescription");
     }
 
     public boolean isDelete() {
-        return update.callbackQuery().data()
-                .substring(update.callbackQuery().data().indexOf('.'))
-                .contains("delete");
+        return hasCallbackAction("delete");
     }
 
     public boolean isYes() {
-        return update.callbackQuery().data()
-                .substring(update.callbackQuery().data().indexOf('.'))
-                .contains("yes");
+        return hasCallbackAction("yes");
     }
 
     public boolean isNo() {
-        return update.callbackQuery().data()
-                .substring(update.callbackQuery().data().indexOf('.'))
-                .contains("no");
+        return hasCallbackAction("no");
     }
 
     public boolean isBuy() {
-        return update.callbackQuery().data()
-                .substring(update.callbackQuery().data().indexOf('.'))
-                .contains("buy");
+        return hasCallbackAction("buy");
     }
 
     public int getMessageId() {
@@ -128,7 +138,8 @@ public class Message {
     }
 
     public boolean isMySticker() {
-        return update.message().sticker().setName().contains(Constants.STICKER_PACK);
+        String stickerPack = update.message().sticker().setName();
+        return stickerPack != null && stickerPack.contains(Constants.STICKER_PACK);
     }
 
     public String getStickerId() {
@@ -139,7 +150,7 @@ public class Message {
             if (isAdd())
                 return update.callbackQuery().message().replyToMessage().sticker().fileId();
             else
-                return update.callbackQuery().data().substring(0, update.callbackQuery().data().indexOf("."));
+                return getCallbackStickerValue();
         }
         return "";
     }
@@ -152,7 +163,7 @@ public class Message {
             if (isAdd())
                 return update.callbackQuery().message().replyToMessage().sticker().fileUniqueId();
             else
-                return update.callbackQuery().data().substring(0, update.callbackQuery().data().indexOf("."));
+                return getCallbackStickerValue();
         }
         return "";
     }
@@ -187,16 +198,16 @@ public class Message {
         GetFile request = new GetFile(update.message().photo()[update.message().photo().length - 1].fileId());
         GetFileResponse getFileResponse = telegramBot.execute(request);
         URL url = new URL(Constants.FILE_API + telegramBot.getToken() + "/" + getFileResponse.file().filePath());
-        InputStream in = new BufferedInputStream(url.openStream());
-        Bitmap originalBitmap = BitmapFactory.decodeStream(in);
-        Bitmap resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, 512, 512, false);
         File tempFile = File.createTempFile("photo", ".png");
-        FileOutputStream fos = new FileOutputStream(tempFile);
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        resizedBitmap.compress(Bitmap.CompressFormat.PNG, 100, bos);
-        byte[] bitmapData = bos.toByteArray();
-        fos.write(bitmapData);
-        fos.close();
+        try (InputStream in = new BufferedInputStream(url.openStream());
+             FileOutputStream fos = new FileOutputStream(tempFile);
+             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            Bitmap originalBitmap = BitmapFactory.decodeStream(in);
+            Bitmap resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, 512, 512, false);
+            resizedBitmap.compress(Bitmap.CompressFormat.PNG, 100, bos);
+            byte[] bitmapData = bos.toByteArray();
+            fos.write(bitmapData);
+        }
         return new SendDocument(getChatId(), tempFile);
     }
 }

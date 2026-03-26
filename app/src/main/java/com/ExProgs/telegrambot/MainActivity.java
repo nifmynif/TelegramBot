@@ -18,8 +18,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.ExProgs.telegrambot.SQL.JDB;
-import com.ExProgs.telegrambot.constants.Constants;
-import com.ExProgs.telegrambot.models.Order;
 import com.ExProgs.telegrambot.models.Product;
 
 import java.util.ArrayList;
@@ -106,9 +104,7 @@ public class MainActivity extends AppCompatActivity {
         noBtn.setOnClickListener(v -> dialog.dismiss());
         yesBtn.setOnClickListener(view -> {
             Product product = dbHelper.getStuffById(id);
-            Order order = dbHelper.getOrderBySticker(product.getStickerUniqueId());
-            if (order != null)
-                dbHelper.deleteOrder(order.getOrderId());
+            dbHelper.deleteOrdersBySticker(product.getStickerUniqueId());
             dbHelper.deleteStuff(product.getStuffId());
             fillTable();
             dialog.dismiss();
@@ -168,20 +164,22 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("Range")
     private void dialogAdd() {
-        /*Dialog dialog = new Dialog(this);
+        Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.dialog_add);
         Button closeBtn = dialog.findViewById(R.id.close);
         Button saveBtn = dialog.findViewById(R.id.save);
-        EditText stuff_name = dialog.findViewById(R.id.stuff_name);
+        EditText stuffName = dialog.findViewById(R.id.stuff_name);
         closeBtn.setOnClickListener(v -> dialog.dismiss());
         saveBtn.setOnClickListener(view -> {
-            dbHelper.addStuff(stuff_name.getText().toString());
+            String stuffTitle = stuffName.getText().toString().trim();
+            if (stuffTitle.isEmpty()) {
+                stuffName.setError(getString(R.string.stuff_name_required));
+                return;
+            }
+            dbHelper.addStuff(stuffTitle);
             fillTable();
             dialog.dismiss();
         });
-        dialog.show();*/
-        dbHelper.addStuff(Constants.CHANNEL_ID);
-        fillTable();
-        //dialog.dismiss();
+        dialog.show();
     }
 }

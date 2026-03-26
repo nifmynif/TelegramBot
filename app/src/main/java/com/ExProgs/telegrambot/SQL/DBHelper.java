@@ -21,22 +21,24 @@ public class DBHelper {
         this.jdb = new JDB(context);
     }
 
-    public void addStuff(String s) {
+    public String addStuff(String s) {
         database = jdb.getWritableDatabase();
         contentValues = new ContentValues();
         contentValues.put(JDB.KEY_NAME, s);
         contentValues.put(JDB.KEY_OBJECT_TYPE, 1);
-        database.insert(JDB.TABLE_OBJECTS, null, contentValues);
+        long id = database.insert(JDB.TABLE_OBJECTS, null, contentValues);
         database.close();
+        return String.valueOf(id);
     }
 
-    public void addOrder(String s) {
+    public String addOrder(String s) {
         database = jdb.getWritableDatabase();
         contentValues = new ContentValues();
         contentValues.put(JDB.KEY_NAME, s);
         contentValues.put(JDB.KEY_OBJECT_TYPE, 2);
-        database.insert(JDB.TABLE_OBJECTS, null, contentValues);
+        long id = database.insert(JDB.TABLE_OBJECTS, null, contentValues);
         database.close();
+        return String.valueOf(id);
     }
 
     @SuppressLint({"Range", "Recycle"})
@@ -44,8 +46,8 @@ public class DBHelper {
         Cursor cursor = jdb.getReadableDatabase()
                 .query(JDB.TABLE_PARAMS,
                         null,
-                        JDB.KEY_VALUE + " = \"" + id + "\" AND " + JDB.KEY_ATTR_ID + " = 5",
-                        null,
+                        JDB.KEY_VALUE + " = ? AND " + JDB.KEY_ATTR_ID + " = ?",
+                        new String[]{id, "5"},
                         null,
                         null,
                         null);
@@ -61,8 +63,8 @@ public class DBHelper {
         Cursor cursor = jdb.getReadableDatabase()
                 .query(JDB.TABLE_OBJECTS,
                         null,
-                        JDB.KEY_NAME + " = \"" + name + "\" AND " + JDB.KEY_OBJECT_TYPE + " = 1",
-                        null,
+                        JDB.KEY_NAME + " = ? AND " + JDB.KEY_OBJECT_TYPE + " = ?",
+                        new String[]{name, "1"},
                         null,
                         null,
                         null);
@@ -136,19 +138,43 @@ public class DBHelper {
     public Order getOrderBySticker(String id) {
         Order order = null;
         if (id != null) {
-            Cursor cursor = jdb.getReadableDatabase()
-                    .query(JDB.TABLE_OBJECTS,
-                            null,
-                            JDB.KEY_NAME + " = \"" + id + "\" AND " + JDB.KEY_OBJECT_TYPE + " = 2",
-                            null,
-                            null,
-                            null,
-                            null);
-            while (cursor.moveToNext())
-                order = getOrderById(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)));
-            cursor.close();
+            ArrayList<Order> orders = getOrdersBySticker(id);
+            if (!orders.isEmpty()) {
+                order = orders.get(0);
+            }
         }
         return order;
+    }
+
+    @SuppressLint({"Range", "Recycle"})
+    public ArrayList<Order> getOrdersBySticker(String id) {
+        ArrayList<Order> orders = new ArrayList<>();
+        if (id == null) {
+            return orders;
+        }
+
+        Cursor cursor = jdb.getReadableDatabase()
+                .query(JDB.TABLE_OBJECTS,
+                        null,
+                        JDB.KEY_NAME + " = ? AND " + JDB.KEY_OBJECT_TYPE + " = ?",
+                        new String[]{id, "2"},
+                        null,
+                        null,
+                        null);
+        while (cursor.moveToNext()) {
+            orders.add(getOrderById(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID))));
+        }
+        cursor.close();
+        return orders;
+    }
+
+    public Order getOrderByStickerAndUser(String stickerId, String user) {
+        for (Order order : getOrdersBySticker(stickerId)) {
+            if (user != null && user.equals(order.getUser())) {
+                return order;
+            }
+        }
+        return null;
     }
 
     @SuppressLint({"Range", "Recycle"})
@@ -156,9 +182,8 @@ public class DBHelper {
         Cursor cursor = jdb.getReadableDatabase()
                 .query(JDB.TABLE_PARAMS,
                         null,
-                        JDB.KEY_OBJECT_ID + " = " + object_id
-                                + " AND " + JDB.KEY_ATTR_ID + " = " + attr_id,
-                        null,
+                        JDB.KEY_OBJECT_ID + " = ? AND " + JDB.KEY_ATTR_ID + " = ?",
+                        new String[]{object_id, attr_id},
                         null,
                         null,
                         null);
@@ -200,8 +225,7 @@ public class DBHelper {
         String orderId;
         while (cursor.moveToNext()) {
             orderId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ID));
-            if (getParam(orderId, "8")
-                    .equals(Constants.NO)) {
+            if (Constants.NO.equals(getParam(orderId, "8"))) {
                 orders.add(getOrderById(orderId));
             }
         }
@@ -212,14 +236,14 @@ public class DBHelper {
     @SuppressLint({"Range", "Recycle"})
     public ArrayList<Order> getUserOrders(String user) {
         ArrayList<Order> orders = getOrders();
-        orders.removeIf(order -> !order.getUser().contains(user));
+        orders.removeIf(order -> order.getUser() == null || !order.getUser().equals(user));
         return orders;
     }
 
     public void deleteStuff(String id) {
         database = jdb.getWritableDatabase();
         contentValues = new ContentValues();
-        database.delete(JDB.TABLE_OBJECTS, JDB.KEY_ID + " = " + id, null);
+        database.delete(JDB.TABLE_OBJECTS, JDB.KEY_ID + " = ?", new String[]{id});
         deleteParam(id);
         database.close();
     }
@@ -227,9 +251,15 @@ public class DBHelper {
     public void deleteOrder(String id) {
         database = jdb.getWritableDatabase();
         contentValues = new ContentValues();
-        database.delete(JDB.TABLE_OBJECTS, JDB.KEY_ID + " = " + id, null);
+        database.delete(JDB.TABLE_OBJECTS, JDB.KEY_ID + " = ?", new String[]{id});
         deleteParam(id);
         database.close();
+    }
+
+    public void deleteOrdersBySticker(String stickerId) {
+        for (Order order : getOrdersBySticker(stickerId)) {
+            deleteOrder(order.getOrderId());
+        }
     }
 
     public void addParam(String id, String attrId, String value) {
@@ -242,8 +272,8 @@ public class DBHelper {
             database.insert(JDB.TABLE_PARAMS, null, contentValues);
         else
             database.update(JDB.TABLE_PARAMS, contentValues,
-                    JDB.KEY_OBJECT_ID + " = " + id + " AND " + JDB.KEY_ATTR_ID + " = " + attrId,
-                    null);
+                    JDB.KEY_OBJECT_ID + " = ? AND " + JDB.KEY_ATTR_ID + " = ?",
+                    new String[]{id, attrId});
         database.close();
     }
 
@@ -251,8 +281,8 @@ public class DBHelper {
         return jdb.getReadableDatabase()
                 .query(JDB.TABLE_PARAMS,
                         null,
-                        JDB.KEY_OBJECT_ID + " = " + id,
-                        null,
+                        JDB.KEY_OBJECT_ID + " = ?",
+                        new String[]{id},
                         null,
                         null,
                         null);
@@ -261,13 +291,14 @@ public class DBHelper {
     private void deleteParam(String id) {
         database = jdb.getWritableDatabase();
         contentValues = new ContentValues();
-        database.delete(JDB.TABLE_PARAMS, JDB.KEY_OBJECT_ID + " = " + id, null);
+        database.delete(JDB.TABLE_PARAMS, JDB.KEY_OBJECT_ID + " = ?", new String[]{id});
         database.close();
     }
 
     public void addEdit(String objectId, String attrId) {
         database = jdb.getWritableDatabase();
         contentValues = new ContentValues();
+        database.delete(JDB.TABLE_EDIT, null, null);
         contentValues.put(JDB.KEY_OBJECT_ID, objectId);
         contentValues.put(JDB.KEY_ATTR_ID, attrId);
         database.insert(JDB.TABLE_EDIT, null, contentValues);

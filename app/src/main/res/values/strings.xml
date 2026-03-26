@@ -15,4 +15,5 @@
     <string name="addStuff">+</string>
     <string name="stickerId">id товара</string>
     <string name="stickerUniqueId">id стикера</string>
+    <string name="stuff_name_required">Введите название товара</string>
 </resources>

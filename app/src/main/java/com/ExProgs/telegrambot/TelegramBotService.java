@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
+import android.util.Log;
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.ExProgs.telegrambot.constants.Constants;
@@ -15,10 +16,13 @@ import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
 
 public class TelegramBotService extends Service {
-    private final DBHelper dbHelper;
+    private static final String TAG = "TelegramBotService";
+    private DBHelper dbHelper;
 
-    public TelegramBotService() {
-        this.dbHelper = new DBHelper(this);
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        dbHelper = new DBHelper(this);
     }
 
     @Override
@@ -29,13 +33,24 @@ public class TelegramBotService extends Service {
                 NotificationManager.IMPORTANCE_LOW
         );
 
-        getSystemService(NotificationManager.class).createNotificationChannel(channel);
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        if (notificationManager != null) {
+            notificationManager.createNotificationChannel(channel);
+        }
         Notification.Builder notification = new Notification.Builder(this, Constants.CHANNEL_ID)
                 .setContentTitle("магазин работает!")
-                .setContentText("и делает какуюто фигню...")
+                .setContentText(Constants.TB_TOKEN.isEmpty()
+                        ? "не настроен TELEGRAM_BOT_TOKEN"
+                        : "и делает какуюто фигню...")
                 .setSmallIcon(R.drawable.ic_launcher_background);
 
         startForeground(1333, notification.build());
+
+        if (Constants.TB_TOKEN.isEmpty()) {
+            Log.e(TAG, "TELEGRAM_BOT_TOKEN is not configured. Set it via Gradle property or environment variable.");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
 
         ShopBot shopBot = new ShopBot(new TelegramBot(Constants.TB_TOKEN), dbHelper);
         shopBot.getTelegramBot().setUpdatesListener(updates -> {
@@ -45,11 +60,11 @@ public class TelegramBotService extends Service {
                     shopBot.getTelegramBot().execute(shopBot.answer());
                 }
             } catch (Exception e) {
-                System.out.println(e.getMessage());
+                Log.e(TAG, "Failed to process Telegram update", e);
             }
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
         });
-        return super.onStartCommand(intent, flags, startId);
+        return START_STICKY;
     }
 
     @Override
