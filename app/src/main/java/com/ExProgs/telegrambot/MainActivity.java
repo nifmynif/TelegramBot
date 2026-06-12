@@ -1,15 +1,10 @@
 package com.ExProgs.telegrambot;
 
-import android.annotation.SuppressLint;
 import android.app.ActivityManager;
-import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -17,28 +12,86 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
-import com.ExProgs.telegrambot.SQL.JDB;
-import com.ExProgs.telegrambot.models.Product;
+import com.ExProgs.telegrambot.models.PerformanceSession;
+import com.ExProgs.telegrambot.models.TheaterParser;
 
-import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private DBHelper dbHelper;
+    private TheaterParser theaterParser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         dbHelper = new DBHelper(getApplicationContext());
-        createAddStuffBtn();
-        fillTable();
+        theaterParser = new TheaterParser();
+
         if (!isServiceRunning(this, TelegramBotService.class)) {
-            Intent serviceIntent = new Intent(this, TelegramBotService.class);
-            startForegroundService(serviceIntent);
+            startForegroundService(new Intent(this, TelegramBotService.class));
+        }
+
+        Button btnParse = findViewById(R.id.btn_parse);
+        btnParse.setOnClickListener(v -> {
+            btnParse.setEnabled(false);
+            btnParse.setText("Парсинг...");
+            new Thread(() -> {
+                theaterParser.parseAllSites(dbHelper);
+                runOnUiThread(() -> {
+                    fillTable();
+                    btnParse.setEnabled(true);
+                    btnParse.setText("Парсить сейчас");
+                });
+            }).start();
+        });
+
+        fillTable();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        fillTable();
+    }
+
+    private void fillTable() {
+        List<PerformanceSession> sessions = dbHelper.getAllSessions();
+        int activeSubscribers = dbHelper.getActiveSubscriberCount();
+
+        TextView statsText = findViewById(R.id.stats_text);
+        statsText.setText("Спектаклей: " + sessions.size()
+                + "  |  Подписчиков: " + activeSubscribers);
+
+        TableLayout table = findViewById(R.id.table);
+        table.removeAllViews();
+
+        TableRow header = new TableRow(this);
+        header.addView(makeCell("Спектакль", true));
+        header.addView(makeCell("Дата", true));
+        header.addView(makeCell("✓", true));
+        table.addView(header);
+
+        for (PerformanceSession session : sessions) {
+            TableRow row = new TableRow(this);
+            row.addView(makeCell(session.getTitle(), false));
+            row.addView(makeCell(session.getDateTime(), false));
+            row.addView(makeCell(session.isSent() ? "✓" : "◌", false));
+            table.addView(row);
         }
     }
 
-    public boolean isServiceRunning(Context context, Class<?> serviceClass) {
+    private TextView makeCell(String text, boolean bold) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(13);
+        tv.setPadding(8, 4, 8, 4);
+        if (bold) tv.setTypeface(null, android.graphics.Typeface.BOLD);
+        return tv;
+    }
+
+    private boolean isServiceRunning(Context context, Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
             if (serviceClass.getName().equals(service.service.getClassName())) {
@@ -46,140 +99,5 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return false;
-    }
-
-    private void createAddStuffBtn() {
-        Button addStuff = findViewById(R.id.add_stuff);
-        addStuff.setOnClickListener(view -> dialogAdd());
-    }
-
-    private void fillTable() {
-        TableLayout tableLayout = findViewById(R.id.table);
-        tableLayout.removeAllViews();
-        ArrayList<Product> stuffs = dbHelper.getStuffs();
-        for (Product product : stuffs) {
-            TableRow tableRow = new TableRow(this);
-            TextView textName = new TextView(this);
-            textName.setText(product.getName());
-            textName.setTextSize(20);
-            textName.setMaxWidth(150);
-            TextView textId = new TextView(this);
-            textId.setText(product.getStuffId());
-            textId.setTextSize(20);
-            Button buttonEdit = new Button(this);
-            buttonEdit.setText("\uD83D\uDCDD");
-            buttonEdit.setId(Integer.parseInt(product.getStuffId()));
-            buttonEdit.setOnClickListener(v -> dialogEdit(textId.getText().toString()));
-            Button buttonDelete = new Button(this);
-            buttonDelete.setText("\uD83D\uDDD1");
-            buttonDelete.setId(Integer.parseInt(product.getStuffId()));
-            buttonDelete.setOnClickListener(v -> dialogDel(textId.getText().toString()));
-
-            tableRow.addView(textName);
-            tableRow.addView(getDivider());
-
-            tableRow.addView(textId);
-            tableRow.addView(getDivider());
-
-            tableRow.addView(buttonEdit);
-            tableRow.addView(getDivider());
-
-            tableRow.addView(buttonDelete);
-
-            tableLayout.addView(tableRow);
-        }
-    }
-
-    private View getDivider() {
-        View divider = new View(this);
-        divider.setLayoutParams(new TableRow.LayoutParams(50, TableRow.LayoutParams.MATCH_PARENT));
-        return divider;
-    }
-
-    private void dialogDel(String id) {
-        Dialog dialog = new Dialog(this);
-        dialog.setContentView(R.layout.dialog_del);
-        Button noBtn = dialog.findViewById(R.id.no);
-        Button yesBtn = dialog.findViewById(R.id.yes);
-        noBtn.setOnClickListener(v -> dialog.dismiss());
-        yesBtn.setOnClickListener(view -> {
-            Product product = dbHelper.getStuffById(id);
-            dbHelper.deleteOrdersBySticker(product.getStickerUniqueId());
-            dbHelper.deleteStuff(product.getStuffId());
-            fillTable();
-            dialog.dismiss();
-        });
-        dialog.show();
-    }
-
-    @SuppressLint("Range")
-    private void dialogEdit(String id) {
-        Dialog dialog = new Dialog(this);
-        dialog.setContentView(R.layout.dialog_edit);
-        Button closeBtn = dialog.findViewById(R.id.close);
-        Button saveBtn = dialog.findViewById(R.id.save);
-        Cursor cursor = dbHelper.getParams(id);
-        EditText stuff_name = dialog.findViewById(R.id.stuff_name);
-        EditText stuff_price = dialog.findViewById(R.id.stuff_price);
-        EditText stuff_description = dialog.findViewById(R.id.stuff_description);
-        EditText stuff_sticker_id = dialog.findViewById(R.id.stuff_sticker_id);
-        EditText stuff_sticker_unique_id = dialog.findViewById(R.id.stuff_sticker_unique_id);
-        while (cursor.moveToNext()) {
-            @SuppressLint("Range") String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
-            @SuppressLint("Range") String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
-            if (attrId.equals("1")) {
-                stuff_name.setText(value);
-                continue;
-            }
-            if (attrId.equals("2")) {
-                stuff_price.setText(value);
-                continue;
-            }
-            if (attrId.equals("3")) {
-                stuff_description.setText(value);
-                continue;
-            }
-            if (attrId.equals("4")) {
-                stuff_sticker_id.setText(value);
-            }
-            if (attrId.equals("5")) {
-                stuff_sticker_unique_id.setText(value);
-            }
-        }
-        cursor.close();
-        closeBtn.setOnClickListener(v -> dialog.dismiss());
-        saveBtn.setOnClickListener(view -> {
-            Product product = new Product(id);
-            product.setName(stuff_name.getText().toString());
-            product.setPrice(stuff_price.getText().toString());
-            product.setDescription(stuff_description.getText().toString());
-            product.setStickerId(stuff_sticker_id.getText().toString());
-            product.setStickerUniqueId(stuff_sticker_unique_id.getText().toString());
-            product.add(dbHelper);
-            fillTable();
-            dialog.dismiss();
-        });
-        dialog.show();
-    }
-
-    @SuppressLint("Range")
-    private void dialogAdd() {
-        Dialog dialog = new Dialog(this);
-        dialog.setContentView(R.layout.dialog_add);
-        Button closeBtn = dialog.findViewById(R.id.close);
-        Button saveBtn = dialog.findViewById(R.id.save);
-        EditText stuffName = dialog.findViewById(R.id.stuff_name);
-        closeBtn.setOnClickListener(v -> dialog.dismiss());
-        saveBtn.setOnClickListener(view -> {
-            String stuffTitle = stuffName.getText().toString().trim();
-            if (stuffTitle.isEmpty()) {
-                stuffName.setError(getString(R.string.stuff_name_required));
-                return;
-            }
-            dbHelper.addStuff(stuffTitle);
-            fillTable();
-            dialog.dismiss();
-        });
-        dialog.show();
     }
 }

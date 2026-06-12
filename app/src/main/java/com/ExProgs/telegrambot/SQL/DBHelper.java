@@ -6,323 +6,157 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.ExProgs.telegrambot.constants.Constants;
-import com.ExProgs.telegrambot.models.Order;
-import com.ExProgs.telegrambot.models.Product;
+import com.ExProgs.telegrambot.models.PerformanceSession;
+import com.ExProgs.telegrambot.models.TelegramSubscriber;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class DBHelper {
     private final JDB jdb;
-    private SQLiteDatabase database;
-    private ContentValues contentValues;
 
     public DBHelper(Context context) {
         this.jdb = new JDB(context);
     }
 
-    public String addStuff(String s) {
-        database = jdb.getWritableDatabase();
-        contentValues = new ContentValues();
-        contentValues.put(JDB.KEY_NAME, s);
-        contentValues.put(JDB.KEY_OBJECT_TYPE, 1);
-        long id = database.insert(JDB.TABLE_OBJECTS, null, contentValues);
-        database.close();
-        return String.valueOf(id);
-    }
-
-    public String addOrder(String s) {
-        database = jdb.getWritableDatabase();
-        contentValues = new ContentValues();
-        contentValues.put(JDB.KEY_NAME, s);
-        contentValues.put(JDB.KEY_OBJECT_TYPE, 2);
-        long id = database.insert(JDB.TABLE_OBJECTS, null, contentValues);
-        database.close();
-        return String.valueOf(id);
-    }
-
-    @SuppressLint({"Range", "Recycle"})
-    public Product getStuffBySticker(String id) {
-        Cursor cursor = jdb.getReadableDatabase()
-                .query(JDB.TABLE_PARAMS,
-                        null,
-                        JDB.KEY_VALUE + " = ? AND " + JDB.KEY_ATTR_ID + " = ?",
-                        new String[]{id, "5"},
-                        null,
-                        null,
-                        null);
-        Product product = null;
-        while (cursor.moveToNext())
-            product = getStuffById(cursor.getString(cursor.getColumnIndex(JDB.KEY_OBJECT_ID)));
+    public boolean existsByTitleAndDateTime(String title, String dateTime) {
+        SQLiteDatabase db = jdb.getReadableDatabase();
+        Cursor cursor = db.query(JDB.TABLE_SESSIONS, new String[]{JDB.COL_ID},
+                JDB.COL_TITLE + " = ? AND " + JDB.COL_DATE_TIME + " = ?",
+                new String[]{title, dateTime}, null, null, null);
+        boolean exists = cursor.getCount() > 0;
         cursor.close();
-        return product;
+        return exists;
     }
 
-    @SuppressLint({"Range", "Recycle"})
-    public Product getStuffByName(String name) {
-        Cursor cursor = jdb.getReadableDatabase()
-                .query(JDB.TABLE_OBJECTS,
-                        null,
-                        JDB.KEY_NAME + " = ? AND " + JDB.KEY_OBJECT_TYPE + " = ?",
-                        new String[]{name, "1"},
-                        null,
-                        null,
-                        null);
-        Product product = null;
-        while (cursor.moveToNext())
-            product = getStuffById(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID)));
-        cursor.close();
-        return product;
+    public void saveSession(PerformanceSession session) {
+        SQLiteDatabase db = jdb.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(JDB.COL_TITLE, session.getTitle());
+        cv.put(JDB.COL_DATE_TIME, session.getDateTime());
+        cv.put(JDB.COL_BUY_URL, session.getBuyUrl());
+        cv.put(JDB.COL_SENT, session.isSent() ? 1 : 0);
+        cv.put(JDB.COL_CREATED_AT, System.currentTimeMillis());
+        db.insert(JDB.TABLE_SESSIONS, null, cv);
     }
 
     @SuppressLint("Range")
-    public Product getStuffById(String id) {
-        Cursor cursor = getParams(id);
-        Product product = new Product(id);
+    public List<PerformanceSession> findAllUnsent() {
+        SQLiteDatabase db = jdb.getReadableDatabase();
+        Cursor cursor = db.query(JDB.TABLE_SESSIONS, null,
+                JDB.COL_SENT + " = 0", null, null, null, null);
+        List<PerformanceSession> list = new ArrayList<>();
         while (cursor.moveToNext()) {
-            String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
-            String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
-            if (attrId.equals("1")) {
-                product.setName(value);
-                continue;
-            }
-            if (attrId.equals("2")) {
-                product.setPrice(value);
-                continue;
-            }
-            if (attrId.equals("3")) {
-                product.setDescription(value);
-                continue;
-            }
-            if (attrId.equals("4")) {
-                product.setStickerId(value);
-                continue;
-            }
-            if (attrId.equals("5"))
-                product.setStickerUniqueId(value);
+            list.add(cursorToSession(cursor));
         }
         cursor.close();
-        return product;
+        return list;
     }
 
     @SuppressLint("Range")
-    private Order getOrderById(String id) {
-        Cursor cursor = getParams(id);
-        Order order = new Order(id);
-        if (cursor.getCount() > 0) {
-            while (cursor.moveToNext()) {
-                String attrId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ATTR_ID));
-                String value = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
-                if (attrId.equals("7")) {
-                    order.setUser(value);
-                    continue;
-                }
-                if (attrId.equals("9")) {
-                    order.setDate(value);
-                    continue;
-                }
-                if (attrId.equals("8")) {
-                    order.setPass(value);
-                    continue;
-                }
-                if (attrId.equals("6")) {
-                    order.setSticker(value);
-                }
-            }
-        }
-        cursor.close();
-        return order;
-    }
-
-    @SuppressLint({"Range", "Recycle"})
-    public Order getOrderBySticker(String id) {
-        Order order = null;
-        if (id != null) {
-            ArrayList<Order> orders = getOrdersBySticker(id);
-            if (!orders.isEmpty()) {
-                order = orders.get(0);
-            }
-        }
-        return order;
-    }
-
-    @SuppressLint({"Range", "Recycle"})
-    public ArrayList<Order> getOrdersBySticker(String id) {
-        ArrayList<Order> orders = new ArrayList<>();
-        if (id == null) {
-            return orders;
-        }
-
-        Cursor cursor = jdb.getReadableDatabase()
-                .query(JDB.TABLE_OBJECTS,
-                        null,
-                        JDB.KEY_NAME + " = ? AND " + JDB.KEY_OBJECT_TYPE + " = ?",
-                        new String[]{id, "2"},
-                        null,
-                        null,
-                        null);
+    public List<PerformanceSession> getAllSessions() {
+        SQLiteDatabase db = jdb.getReadableDatabase();
+        Cursor cursor = db.query(JDB.TABLE_SESSIONS, null, null, null,
+                null, null, JDB.COL_ID + " DESC");
+        List<PerformanceSession> list = new ArrayList<>();
         while (cursor.moveToNext()) {
-            orders.add(getOrderById(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID))));
+            list.add(cursorToSession(cursor));
         }
         cursor.close();
-        return orders;
+        return list;
     }
 
-    public Order getOrderByStickerAndUser(String stickerId, String user) {
-        for (Order order : getOrdersBySticker(stickerId)) {
-            if (user != null && user.equals(order.getUser())) {
-                return order;
-            }
+    public void markAsSent(List<PerformanceSession> sessions) {
+        SQLiteDatabase db = jdb.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(JDB.COL_SENT, 1);
+        for (PerformanceSession session : sessions) {
+            db.update(JDB.TABLE_SESSIONS, cv,
+                    JDB.COL_ID + " = ?", new String[]{String.valueOf(session.getId())});
         }
-        return null;
     }
 
-    @SuppressLint({"Range", "Recycle"})
-    public String getParam(String object_id, String attr_id) {
-        Cursor cursor = jdb.getReadableDatabase()
-                .query(JDB.TABLE_PARAMS,
-                        null,
-                        JDB.KEY_OBJECT_ID + " = ? AND " + JDB.KEY_ATTR_ID + " = ?",
-                        new String[]{object_id, attr_id},
-                        null,
-                        null,
-                        null);
-        String s = null;
-        while (cursor.moveToNext())
-            s = cursor.getString(cursor.getColumnIndex(JDB.KEY_VALUE));
+    public void deleteOldSessions() {
+        long threshold = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
+        SQLiteDatabase db = jdb.getWritableDatabase();
+        db.delete(JDB.TABLE_SESSIONS, JDB.COL_CREATED_AT + " < ?",
+                new String[]{String.valueOf(threshold)});
+    }
+
+    @SuppressLint("Range")
+    public TelegramSubscriber findSubscriberByChatId(long chatId) {
+        SQLiteDatabase db = jdb.getReadableDatabase();
+        Cursor cursor = db.query(JDB.TABLE_SUBSCRIBERS, null,
+                JDB.COL_CHAT_ID + " = ?", new String[]{String.valueOf(chatId)},
+                null, null, null);
+        TelegramSubscriber sub = null;
+        if (cursor.moveToFirst()) {
+            sub = cursorToSubscriber(cursor);
+        }
         cursor.close();
-        return s;
+        return sub;
     }
 
-    @SuppressLint({"Range", "Recycle"})
-    public ArrayList<Product> getStuffs() {
-        Cursor cursor = jdb.getReadableDatabase()
-                .query(JDB.TABLE_OBJECTS,
-                        null,
-                        JDB.KEY_OBJECT_TYPE + " = 1",
-                        null,
-                        null,
-                        null,
-                        null);
-        ArrayList<Product> stuffs = new ArrayList<>();
-        while (cursor.moveToNext())
-            stuffs.add(getStuffById(cursor.getString(cursor.getColumnIndex(JDB.KEY_ID))));
-        cursor.close();
-        return stuffs;
+    public void saveSubscriber(TelegramSubscriber subscriber) {
+        SQLiteDatabase db = jdb.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(JDB.COL_CHAT_ID, subscriber.getChatId());
+        cv.put(JDB.COL_USERNAME, subscriber.getUsername());
+        cv.put(JDB.COL_FIRST_NAME, subscriber.getFirstName());
+        cv.put(JDB.COL_LAST_NAME, subscriber.getLastName());
+        cv.put(JDB.COL_IS_ACTIVE, subscriber.isActive() ? 1 : 0);
+        int updated = db.update(JDB.TABLE_SUBSCRIBERS, cv,
+                JDB.COL_CHAT_ID + " = ?", new String[]{String.valueOf(subscriber.getChatId())});
+        if (updated == 0) {
+            db.insert(JDB.TABLE_SUBSCRIBERS, null, cv);
+        }
     }
 
-    @SuppressLint({"Range", "Recycle"})
-    public ArrayList<Order> getOrders() {
-        Cursor cursor = jdb.getReadableDatabase()
-                .query(JDB.TABLE_OBJECTS,
-                        null,
-                        JDB.KEY_OBJECT_TYPE + " = 2",
-                        null,
-                        null,
-                        null,
-                        null);
-        ArrayList<Order> orders = new ArrayList<>();
-        String orderId;
+    @SuppressLint("Range")
+    public List<TelegramSubscriber> findAllActiveSubscribers() {
+        SQLiteDatabase db = jdb.getReadableDatabase();
+        Cursor cursor = db.query(JDB.TABLE_SUBSCRIBERS, null,
+                JDB.COL_IS_ACTIVE + " = 1", null, null, null, null);
+        List<TelegramSubscriber> list = new ArrayList<>();
         while (cursor.moveToNext()) {
-            orderId = cursor.getString(cursor.getColumnIndex(JDB.KEY_ID));
-            if (Constants.NO.equals(getParam(orderId, "8"))) {
-                orders.add(getOrderById(orderId));
-            }
+            list.add(cursorToSubscriber(cursor));
         }
         cursor.close();
-        return orders;
+        return list;
     }
 
-    @SuppressLint({"Range", "Recycle"})
-    public ArrayList<Order> getUserOrders(String user) {
-        ArrayList<Order> orders = getOrders();
-        orders.removeIf(order -> order.getUser() == null || !order.getUser().equals(user));
-        return orders;
-    }
-
-    public void deleteStuff(String id) {
-        database = jdb.getWritableDatabase();
-        contentValues = new ContentValues();
-        database.delete(JDB.TABLE_OBJECTS, JDB.KEY_ID + " = ?", new String[]{id});
-        deleteParam(id);
-        database.close();
-    }
-
-    public void deleteOrder(String id) {
-        database = jdb.getWritableDatabase();
-        contentValues = new ContentValues();
-        database.delete(JDB.TABLE_OBJECTS, JDB.KEY_ID + " = ?", new String[]{id});
-        deleteParam(id);
-        database.close();
-    }
-
-    public void deleteOrdersBySticker(String stickerId) {
-        for (Order order : getOrdersBySticker(stickerId)) {
-            deleteOrder(order.getOrderId());
-        }
-    }
-
-    public void addParam(String id, String attrId, String value) {
-        database = jdb.getWritableDatabase();
-        contentValues = new ContentValues();
-        contentValues.put(JDB.KEY_ATTR_ID, attrId);
-        contentValues.put(JDB.KEY_VALUE, value);
-        contentValues.put(JDB.KEY_OBJECT_ID, id);
-        if (getParam(id, attrId) == null)
-            database.insert(JDB.TABLE_PARAMS, null, contentValues);
-        else
-            database.update(JDB.TABLE_PARAMS, contentValues,
-                    JDB.KEY_OBJECT_ID + " = ? AND " + JDB.KEY_ATTR_ID + " = ?",
-                    new String[]{id, attrId});
-        database.close();
-    }
-
-    public Cursor getParams(String id) {
-        return jdb.getReadableDatabase()
-                .query(JDB.TABLE_PARAMS,
-                        null,
-                        JDB.KEY_OBJECT_ID + " = ?",
-                        new String[]{id},
-                        null,
-                        null,
-                        null);
-    }
-
-    private void deleteParam(String id) {
-        database = jdb.getWritableDatabase();
-        contentValues = new ContentValues();
-        database.delete(JDB.TABLE_PARAMS, JDB.KEY_OBJECT_ID + " = ?", new String[]{id});
-        database.close();
-    }
-
-    public void addEdit(String objectId, String attrId) {
-        database = jdb.getWritableDatabase();
-        contentValues = new ContentValues();
-        database.delete(JDB.TABLE_EDIT, null, null);
-        contentValues.put(JDB.KEY_OBJECT_ID, objectId);
-        contentValues.put(JDB.KEY_ATTR_ID, attrId);
-        database.insert(JDB.TABLE_EDIT, null, contentValues);
-        database.close();
-    }
-
-    public void delEdit() {
-        database = jdb.getWritableDatabase();
-        contentValues = new ContentValues();
-        database.delete(JDB.TABLE_EDIT,
-                null,
+    public int getActiveSubscriberCount() {
+        SQLiteDatabase db = jdb.getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT COUNT(*) FROM " + JDB.TABLE_SUBSCRIBERS + " WHERE " + JDB.COL_IS_ACTIVE + " = 1",
                 null);
-        database.close();
+        int count = 0;
+        if (cursor.moveToFirst()) count = cursor.getInt(0);
+        cursor.close();
+        return count;
     }
 
-    @SuppressLint({"Range", "Recycle"})
-    public Cursor getEdit() {
-        return jdb.getReadableDatabase()
-                .query(JDB.TABLE_EDIT,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null);
+    @SuppressLint("Range")
+    private PerformanceSession cursorToSession(Cursor cursor) {
+        PerformanceSession session = new PerformanceSession();
+        session.setId(cursor.getLong(cursor.getColumnIndex(JDB.COL_ID)));
+        session.setTitle(cursor.getString(cursor.getColumnIndex(JDB.COL_TITLE)));
+        session.setDateTime(cursor.getString(cursor.getColumnIndex(JDB.COL_DATE_TIME)));
+        session.setBuyUrl(cursor.getString(cursor.getColumnIndex(JDB.COL_BUY_URL)));
+        session.setSent(cursor.getInt(cursor.getColumnIndex(JDB.COL_SENT)) == 1);
+        session.setCreatedAt(cursor.getLong(cursor.getColumnIndex(JDB.COL_CREATED_AT)));
+        return session;
+    }
+
+    @SuppressLint("Range")
+    private TelegramSubscriber cursorToSubscriber(Cursor cursor) {
+        TelegramSubscriber sub = new TelegramSubscriber();
+        sub.setId(cursor.getLong(cursor.getColumnIndex(JDB.COL_ID)));
+        sub.setChatId(cursor.getLong(cursor.getColumnIndex(JDB.COL_CHAT_ID)));
+        sub.setUsername(cursor.getString(cursor.getColumnIndex(JDB.COL_USERNAME)));
+        sub.setFirstName(cursor.getString(cursor.getColumnIndex(JDB.COL_FIRST_NAME)));
+        sub.setLastName(cursor.getString(cursor.getColumnIndex(JDB.COL_LAST_NAME)));
+        sub.setActive(cursor.getInt(cursor.getColumnIndex(JDB.COL_IS_ACTIVE)) == 1);
+        return sub;
     }
 }
