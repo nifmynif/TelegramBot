@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import androidx.annotation.Nullable;
 
 public class JDB extends SQLiteOpenHelper {
-    public static final int DATABASE_VERSION = 23;
+    public static final int DATABASE_VERSION = 24;
     public static final String DATABASE_NAME = "theaterDB";
 
     public static final String TABLE_SESSIONS = "performance_sessions";
@@ -21,6 +21,7 @@ public class JDB extends SQLiteOpenHelper {
     public static final String COL_SENT = "sent";
     public static final String COL_CREATED_AT = "created_at";
     public static final String COL_STATUS = "status";
+    public static final String COL_FREE_SEATS = "free_seats";
 
     public static final String COL_CHAT_ID = "chat_id";
     public static final String COL_USERNAME = "username";
@@ -44,7 +45,8 @@ public class JDB extends SQLiteOpenHelper {
                 + COL_BUY_URL + " TEXT,"
                 + COL_SENT + " INTEGER DEFAULT 0,"
                 + COL_CREATED_AT + " INTEGER,"
-                + COL_STATUS + " INTEGER DEFAULT 1"
+                + COL_STATUS + " INTEGER DEFAULT 1,"
+                + COL_FREE_SEATS + " INTEGER DEFAULT -1"
                 + ")");
         db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_SUBSCRIBERS + " ("
                 + COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -64,9 +66,13 @@ public class JDB extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion == 22) {
+        if (oldVersion == 22 || oldVersion == 23) {
+            if (oldVersion == 22) {
+                db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
+                        + COL_STATUS + " INTEGER DEFAULT 1");
+            }
             db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
-                    + COL_STATUS + " INTEGER DEFAULT 1");
+                    + COL_FREE_SEATS + " INTEGER DEFAULT -1");
         } else {
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_SESSIONS);
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_SUBSCRIBERS);

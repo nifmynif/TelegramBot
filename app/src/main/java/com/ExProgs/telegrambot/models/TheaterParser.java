@@ -24,6 +24,8 @@ public class TheaterParser {
             "https://puppet-minsk.by/spektakli/spektakli-dlya-vzroslykh/item/282-mroiva"
     );
 
+    private final TceClient tceClient = new TceClient();
+
     public List<PerformanceSession> parseAllSites(DBHelper dbHelper) {
         List<PerformanceSession> fresh = new ArrayList<>();
         for (String url : URLS) {
@@ -50,21 +52,15 @@ public class TheaterParser {
 
             PerformanceSession existing = dbHelper.findSession(title, dateTime);
             if (existing == null) {
-                saveNewSession(dbHelper, fresh, title, dateTime, buyUrl);
-            } else if (!buyUrl.isEmpty() && !existing.isOnSale()) {
-                markAvailableAgain(dbHelper, fresh, existing, buyUrl);
-            } else if (!buyUrl.isEmpty() && !buyUrl.equals(existing.getBuyUrl())) {
-                existing.setBuyUrl(buyUrl);
-                dbHelper.updateSession(existing);
-            } else if (buyUrl.isEmpty() && existing.isOnSale()) {
-                existing.setStatus(PerformanceSession.STATUS_UNAVAILABLE);
-                dbHelper.updateSession(existing);
+                handleNewSession(dbHelper, fresh, title, dateTime, buyUrl);
+            } else {
+                handleExistingSession(dbHelper, fresh, existing, buyUrl);
             }
         }
     }
 
-    private void saveNewSession(DBHelper dbHelper, List<PerformanceSession> fresh,
-                                String title, String dateTime, String buyUrl) {
+    private void handleNewSession(DBHelper dbHelper, List<PerformanceSession> fresh,
+                                  String title, String dateTime, String buyUrl) {
         PerformanceSession session = new PerformanceSession();
         session.setTitle(title);
         session.setDateTime(dateTime);
@@ -73,22 +69,59 @@ public class TheaterParser {
         session.setStatus(buyUrl.isEmpty()
                 ? PerformanceSession.STATUS_UNAVAILABLE
                 : PerformanceSession.STATUS_ON_SALE);
+        if (!buyUrl.isEmpty()) {
+            int seats = tceClient.fetchFreeSeats(buyUrl);
+            session.setFreeSeats(seats);
+            if (seats == 0) {
+                session.setStatus(PerformanceSession.STATUS_UNAVAILABLE);
+            }
+        }
         dbHelper.saveSession(session);
-        Log.i(TAG, "Saved: " + title + " - " + dateTime);
+        Log.i(TAG, "Saved: " + title + " - " + dateTime
+                + (session.getFreeSeats() >= 0 ? " (мест: " + session.getFreeSeats() + ")" : ""));
         if (session.isOnSale()) {
             fresh.add(session);
         }
     }
 
-    private void markAvailableAgain(DBHelper dbHelper, List<PerformanceSession> fresh,
-                                    PerformanceSession existing, String buyUrl) {
-        existing.setBuyUrl(buyUrl);
-        existing.setStatus(PerformanceSession.STATUS_ON_SALE);
-        existing.setSent(false);
-        existing.setAvailableAgain(true);
-        dbHelper.updateSession(existing);
-        dbHelper.clearDeliveries(existing.getId());
-        Log.i(TAG, "Available again: " + existing.getTitle() + " - " + existing.getDateTime());
-        fresh.add(existing);
+    private void handleExistingSession(DBHelper dbHelper, List<PerformanceSession> fresh,
+                                       PerformanceSession existing, String buyUrl) {
+        boolean urlChanged = !buyUrl.equals(existing.getBuyUrl());
+        if (urlChanged) {
+            existing.setBuyUrl(buyUrl);
+        }
+        if (buyUrl.isEmpty()) {
+            if (existing.isOnSale()) {
+                existing.setStatus(PerformanceSession.STATUS_UNAVAILABLE);
+                dbHelper.updateSession(existing);
+            } else if (urlChanged) {
+                dbHelper.updateSession(existing);
+            }
+            return;
+        }
+
+        int seats = tceClient.fetchFreeSeats(buyUrl);
+        if (seats == TceClient.UNKNOWN) {
+            if (urlChanged) {
+                dbHelper.updateSession(existing);
+            }
+            return;
+        }
+        existing.setFreeSeats(seats);
+
+        if (seats > 0 && !existing.isOnSale()) {
+            existing.setStatus(PerformanceSession.STATUS_ON_SALE);
+            existing.setSent(false);
+            existing.setAvailableAgain(true);
+            dbHelper.updateSession(existing);
+            dbHelper.clearDeliveries(existing.getId());
+            Log.i(TAG, "Available again: " + existing.getTitle() + " - " + existing.getDateTime());
+            fresh.add(existing);
+        } else if (seats == 0 && existing.isOnSale()) {
+            existing.setStatus(PerformanceSession.STATUS_UNAVAILABLE);
+            dbHelper.updateSession(existing);
+        } else {
+            dbHelper.updateSession(existing);
+        }
     }
 }

@@ -11,6 +11,7 @@ public class PerformanceSession {
     private boolean sent;
     private long createdAt;
     private int status = STATUS_ON_SALE;
+    private int freeSeats = -1;
     private boolean availableAgain;
 
     public long getId() { return id; }
@@ -35,6 +36,9 @@ public class PerformanceSession {
     public void setStatus(int status) { this.status = status; }
 
     public boolean isOnSale() { return status == STATUS_ON_SALE; }
+
+    public int getFreeSeats() { return freeSeats; }
+    public void setFreeSeats(int freeSeats) { this.freeSeats = freeSeats; }
 
     public boolean isAvailableAgain() { return availableAgain; }
     public void setAvailableAgain(boolean availableAgain) { this.availableAgain = availableAgain; }

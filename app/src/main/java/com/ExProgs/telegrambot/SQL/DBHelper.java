@@ -41,6 +41,7 @@ public class DBHelper {
         cv.put(JDB.COL_SENT, session.isSent() ? 1 : 0);
         cv.put(JDB.COL_CREATED_AT, System.currentTimeMillis());
         cv.put(JDB.COL_STATUS, session.getStatus());
+        cv.put(JDB.COL_FREE_SEATS, session.getFreeSeats());
         long id = jdb.getWritableDatabase().insert(JDB.TABLE_SESSIONS, null, cv);
         if (id > 0) {
             session.setId(id);
@@ -52,6 +53,7 @@ public class DBHelper {
         cv.put(JDB.COL_BUY_URL, session.getBuyUrl());
         cv.put(JDB.COL_SENT, session.isSent() ? 1 : 0);
         cv.put(JDB.COL_STATUS, session.getStatus());
+        cv.put(JDB.COL_FREE_SEATS, session.getFreeSeats());
         jdb.getWritableDatabase().update(JDB.TABLE_SESSIONS, cv,
                 JDB.COL_ID + " = ?", new String[]{String.valueOf(session.getId())});
     }
@@ -189,6 +191,8 @@ public class DBHelper {
         session.setSent(cursor.getInt(cursor.getColumnIndex(JDB.COL_SENT)) == 1);
         session.setCreatedAt(cursor.getLong(cursor.getColumnIndex(JDB.COL_CREATED_AT)));
         session.setStatus(cursor.getInt(cursor.getColumnIndex(JDB.COL_STATUS)));
+        int seatsIdx = cursor.getColumnIndex(JDB.COL_FREE_SEATS);
+        session.setFreeSeats(seatsIdx >= 0 ? cursor.getInt(seatsIdx) : -1);
         return session;
     }
 

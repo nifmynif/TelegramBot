@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 public class TelegramBotService extends Service {
     private static final String TAG = "TelegramBotService";
-    private static final int PARSE_PERIOD_MINUTES = 3;
+    private static final int PARSE_PERIOD_MINUTES = 60;
     private static final int CLEANUP_PERIOD_HOURS = 24;
     private static final int NOTIFICATION_ID = 1333;
 

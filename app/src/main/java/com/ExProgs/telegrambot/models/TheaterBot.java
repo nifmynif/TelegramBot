@@ -121,8 +121,11 @@ public class TheaterBot {
 
     private String buildMessage(PerformanceSession session) {
         String header = session.isAvailableAgain() ? "🔔 Снова в продаже" : "🎭 Новый показ";
+        String seats = session.getFreeSeats() >= 0
+                ? "\n🪑 Свободно мест: " + session.getFreeSeats()
+                : "";
         return header + "\n*" + escapeMarkdownV2(session.getTitle()) + "*\n"
-                + "📅 " + escapeMarkdownV2(session.getDateTime()) + "\n"
+                + "📅 " + escapeMarkdownV2(session.getDateTime()) + seats + "\n"
                 + "🎟️ [Купить билеты](" + session.getBuyUrl() + ")";
     }
 
