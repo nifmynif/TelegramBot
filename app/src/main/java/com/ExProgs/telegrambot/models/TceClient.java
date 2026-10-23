@@ -35,11 +35,15 @@ public class TceClient {
         if (base == null || data == null) return UNKNOWN;
         String apiUrl = "https://tce.by/index.php?view=shows&action=ticket&kind=json"
                 + "&base=" + base + "&data=" + data;
+        String body = null;
         try {
-            String body = getWithAnubis(apiUrl);
+            body = getWithAnubis(apiUrl);
             return parseSeats(body);
         } catch (Exception e) {
-            Log.w(TAG, "fetchFreeSeats failed for " + data, e);
+            String snippet = body != null
+                    ? body.substring(0, Math.min(200, body.length()))
+                    : "no body";
+            Log.w(TAG, "fetchFreeSeats failed for " + data + ", body: " + snippet, e);
             return UNKNOWN;
         }
     }
@@ -80,14 +84,28 @@ public class TceClient {
     }
 
     private Connection.Response get(String url) throws Exception {
-        Connection.Response response = Jsoup.connect(url)
-                .userAgent(USER_AGENT)
-                .timeout(15000)
-                .ignoreContentType(true)
-                .cookies(cookies)
-                .execute();
-        cookies.putAll(response.cookies());
-        return response;
+        String current = url;
+        for (int i = 0; i < 5; i++) {
+            Connection.Response response = Jsoup.connect(current)
+                    .userAgent(USER_AGENT)
+                    .timeout(15000)
+                    .ignoreContentType(true)
+                    .followRedirects(false)
+                    .cookies(cookies)
+                    .execute();
+            cookies.putAll(response.cookies());
+            int status = response.statusCode();
+            if (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) {
+                String location = response.header("Location");
+                if (location == null || location.isEmpty()) {
+                    return response;
+                }
+                current = new java.net.URL(new java.net.URL(current), location).toString();
+                continue;
+            }
+            return response;
+        }
+        throw new java.io.IOException("Too many redirects: " + url);
     }
 
     private void solveAnubis(String challengedUrl, String challengePage) throws Exception {

@@ -33,6 +33,7 @@ public class TelegramBotService extends Service {
     private TheaterParser theaterParser;
     private ScheduledExecutorService scheduler;
     private PowerManager.WakeLock wakeLock;
+    private NotificationManager notificationManager;
 
     @Override
     public void onCreate() {
@@ -47,6 +48,7 @@ public class TelegramBotService extends Service {
                 Constants.CHANNEL_ID, "Театральный бот", NotificationManager.IMPORTANCE_LOW);
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm != null) nm.createNotificationChannel(channel);
+        notificationManager = nm;
 
         Notification notification = new Notification.Builder(this, Constants.CHANNEL_ID)
                 .setContentTitle("Театральный бот работает")
@@ -101,8 +103,10 @@ public class TelegramBotService extends Service {
                 List<PerformanceSession> fresh = theaterParser.parseAllSites(dbHelper);
                 theaterBot.notifySubscribers(fresh);
                 theaterBot.retryPendingDeliveries();
+                reportCycleResult(true);
             } catch (Exception e) {
                 Log.e(TAG, "Ошибка парсинга/рассылки", e);
+                reportCycleResult(false);
             }
         }, 0, PARSE_PERIOD_MINUTES, TimeUnit.MINUTES);
 
@@ -113,6 +117,39 @@ public class TelegramBotService extends Service {
                 Log.e(TAG, "Ошибка очистки старых сессий", e);
             }
         }, CLEANUP_PERIOD_HOURS, CLEANUP_PERIOD_HOURS, TimeUnit.HOURS);
+    }
+
+    private void reportCycleResult(boolean ok) {
+        try {
+            String time = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                    .format(new java.util.Date());
+            String text;
+            if (ok) {
+                int total = 0;
+                for (PerformanceSession session : dbHelper.getAllSessions()) {
+                    if (session.isOnSale() && session.getFreeSeats() > 0) {
+                        total += session.getFreeSeats();
+                    }
+                }
+                text = "Проверка: " + time + " · мест в продаже: " + total;
+            } else {
+                text = "Проверка: " + time + " · ошибка, следующая попытка через "
+                        + PARSE_PERIOD_MINUTES + " мин";
+            }
+            updateStatusNotification(text);
+        } catch (Exception e) {
+            Log.e(TAG, "Ошибка обновления уведомления", e);
+        }
+    }
+
+    private void updateStatusNotification(String text) {
+        if (notificationManager == null) return;
+        Notification notification = new Notification.Builder(this, Constants.CHANNEL_ID)
+                .setContentTitle("Театральный бот работает")
+                .setContentText(text)
+                .setSmallIcon(R.drawable.ic_launcher_background)
+                .build();
+        notificationManager.notify(NOTIFICATION_ID, notification);
     }
 
     private void acquireWakeLock() {
