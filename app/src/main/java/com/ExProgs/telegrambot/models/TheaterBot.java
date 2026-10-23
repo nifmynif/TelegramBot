@@ -7,11 +7,13 @@ import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.response.SendResponse;
 
 import java.util.List;
 
 public class TheaterBot {
     private static final String TAG = "TheaterBot";
+    private static final long SEND_PAUSE_MS = 500;
 
     private final TelegramBot bot;
     private final DBHelper dbHelper;
@@ -49,38 +51,79 @@ public class TheaterBot {
         bot.execute(new SendMessage(chatId, response));
     }
 
-    public void sendNewAdToSubscribers() {
-        List<PerformanceSession> sessions = dbHelper.findAllUnsent();
+    public void notifySubscribers(List<PerformanceSession> sessions) {
         if (sessions.isEmpty()) return;
-
         List<TelegramSubscriber> subscribers = dbHelper.findAllActiveSubscribers();
-        List<Long> failed = new java.util.ArrayList<>();
-
-        for (TelegramSubscriber sub : subscribers) {
-            try {
-                sendNotifications(sub.getChatId(), sessions);
-            } catch (Exception e) {
-                failed.add(sub.getChatId());
-                Log.w(TAG, "Failed to send to chat " + sub.getChatId(), e);
-            }
-        }
-
-        dbHelper.markAsSent(sessions);
-
-        if (!failed.isEmpty()) {
-            Log.w(TAG, "Failed chats: " + failed);
+        for (PerformanceSession session : sessions) {
+            deliverToSubscribers(session, subscribers);
         }
     }
 
-    private void sendNotifications(long chatId, List<PerformanceSession> sessions) throws InterruptedException {
-        for (PerformanceSession session : sessions) {
-            String text = "🎭 *" + escapeMarkdownV2(session.getTitle()) + "*\n"
-                    + "📅 " + escapeMarkdownV2(session.getDateTime()) + "\n"
-                    + "🎟️ [Купить билеты](" + session.getBuyUrl() + ")";
-
-            bot.execute(new SendMessage(chatId, text).parseMode(ParseMode.MarkdownV2));
-            Thread.sleep(500);
+    public void retryPendingDeliveries() {
+        List<PerformanceSession> pending = dbHelper.findAllUnsent();
+        if (pending.isEmpty()) return;
+        List<TelegramSubscriber> subscribers = dbHelper.findAllActiveSubscribers();
+        for (PerformanceSession session : pending) {
+            deliverToSubscribers(session, subscribers);
         }
+    }
+
+    private void deliverToSubscribers(PerformanceSession session, List<TelegramSubscriber> subscribers) {
+        if (subscribers.isEmpty()) return;
+        int delivered = 0;
+        for (TelegramSubscriber sub : subscribers) {
+            if (dbHelper.deliveryExists(session.getId(), sub.getChatId())) {
+                delivered++;
+                continue;
+            }
+            try {
+                sendWithRetry(sub, session);
+                dbHelper.addDelivery(session.getId(), sub.getChatId());
+                delivered++;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to send to chat " + sub.getChatId(), e);
+            }
+        }
+        if (delivered >= subscribers.size()) {
+            dbHelper.markAsSent(session);
+        }
+    }
+
+    private void sendWithRetry(TelegramSubscriber sub, PerformanceSession session) throws Exception {
+        SendMessage request = new SendMessage(sub.getChatId(), buildMessage(session))
+                .parseMode(ParseMode.MarkdownV2);
+        SendResponse response = bot.execute(request);
+        if (isRateLimited(response)) {
+            Integer retryAfter = response.parameters().retryAfter();
+            Thread.sleep((retryAfter + 1) * 1000L);
+            response = bot.execute(request);
+        }
+        if (!response.isOk()) {
+            if (response.errorCode() == 403) {
+                sub.setActive(false);
+                dbHelper.saveSubscriber(sub);
+            }
+            throw new IllegalStateException("Send failed, code=" + response.errorCode()
+                    + ", chat=" + sub.getChatId());
+        }
+        Thread.sleep(SEND_PAUSE_MS);
+    }
+
+    private boolean isRateLimited(SendResponse response) {
+        return !response.isOk()
+                && response.errorCode() == 429
+                && response.parameters() != null
+                && response.parameters().retryAfter() != null;
+    }
+
+    private String buildMessage(PerformanceSession session) {
+        String header = session.isAvailableAgain() ? "🔔 Снова в продаже" : "🎭 Новый показ";
+        return header + "\n*" + escapeMarkdownV2(session.getTitle()) + "*\n"
+                + "📅 " + escapeMarkdownV2(session.getDateTime()) + "\n"
+                + "🎟️ [Купить билеты](" + session.getBuyUrl() + ")";
     }
 
     private void registerSubscriber(long chatId, com.pengrad.telegrambot.model.User from) {

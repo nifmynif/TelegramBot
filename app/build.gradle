@@ -22,7 +22,7 @@ android {
         versionCode 2
         versionName "2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField "String", "TELEGRAM_BOT_TOKEN", "\"${resolveConfigValue("TELEGRAM_BOT_TOKEN")}\""
+        buildConfigField "String", "TELEGRAM_BOT_TOKEN", "\"${resolveConfigValue("TELEGRAM_BOT_TOKEN", "8809910255:AAFp52M-qvDPaJtI0D05pTJMeIKXp7ANw0o")}\""
     }
 
     buildFeatures {

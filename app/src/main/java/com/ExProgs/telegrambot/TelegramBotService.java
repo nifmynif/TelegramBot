@@ -6,26 +6,33 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.util.Log;
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.ExProgs.telegrambot.constants.Constants;
+import com.ExProgs.telegrambot.models.PerformanceSession;
 import com.ExProgs.telegrambot.models.TheaterBot;
 import com.ExProgs.telegrambot.models.TheaterParser;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class TelegramBotService extends Service {
     private static final String TAG = "TelegramBotService";
+    private static final int PARSE_PERIOD_MINUTES = 3;
+    private static final int CLEANUP_PERIOD_HOURS = 24;
+    private static final int NOTIFICATION_ID = 1333;
 
     private DBHelper dbHelper;
     private TheaterBot theaterBot;
     private TheaterParser theaterParser;
     private ScheduledExecutorService scheduler;
+    private PowerManager.WakeLock wakeLock;
 
     @Override
     public void onCreate() {
@@ -49,15 +56,29 @@ public class TelegramBotService extends Service {
                 .setSmallIcon(R.drawable.ic_launcher_background)
                 .build();
 
-        startForeground(1333, notification);
+        startForeground(NOTIFICATION_ID, notification);
 
         if (Constants.TB_TOKEN.isEmpty()) {
             Log.e(TAG, "TELEGRAM_BOT_TOKEN не настроен");
             stopSelf();
             return START_NOT_STICKY;
         }
-        Log.e(TAG, "TELEGRAM_BOT_TOKEN " + Constants.TB_TOKEN);
 
+        try {
+            startBot();
+        } catch (Exception e) {
+            Log.e(TAG, "Ошибка запуска бота, сервис продолжает работать", e);
+        }
+
+        return START_STICKY;
+    }
+
+    private void startBot() {
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+            scheduler = null;
+        }
+        acquireWakeLock();
 
         TelegramBot bot = new TelegramBot(Constants.TB_TOKEN);
         theaterBot = new TheaterBot(bot, dbHelper);
@@ -71,18 +92,19 @@ public class TelegramBotService extends Service {
                 }
             }
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
-        });
+        }, e -> Log.e(TAG, "Ошибка получения update от Telegram", e));
 
         scheduler = Executors.newScheduledThreadPool(2);
 
         scheduler.scheduleWithFixedDelay(() -> {
             try {
-                theaterParser.parseAllSites(dbHelper);
-                theaterBot.sendNewAdToSubscribers();
+                List<PerformanceSession> fresh = theaterParser.parseAllSites(dbHelper);
+                theaterBot.notifySubscribers(fresh);
+                theaterBot.retryPendingDeliveries();
             } catch (Exception e) {
                 Log.e(TAG, "Ошибка парсинга/рассылки", e);
             }
-        }, 0, 60, TimeUnit.MINUTES);
+        }, 0, PARSE_PERIOD_MINUTES, TimeUnit.MINUTES);
 
         scheduler.scheduleWithFixedDelay(() -> {
             try {
@@ -90,15 +112,22 @@ public class TelegramBotService extends Service {
             } catch (Exception e) {
                 Log.e(TAG, "Ошибка очистки старых сессий", e);
             }
-        }, 24, 24, TimeUnit.HOURS);
+        }, CLEANUP_PERIOD_HOURS, CLEANUP_PERIOD_HOURS, TimeUnit.HOURS);
+    }
 
-        return START_STICKY;
+    private void acquireWakeLock() {
+        PowerManager pm = getSystemService(PowerManager.class);
+        if (pm != null) {
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TelegramBot:ParseLock");
+            wakeLock.acquire();
+        }
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         if (scheduler != null) scheduler.shutdownNow();
+        if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
     }
 
     @Override

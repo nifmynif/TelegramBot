@@ -38,7 +38,11 @@ public class MainActivity extends AppCompatActivity {
             btnParse.setEnabled(false);
             btnParse.setText("Парсинг...");
             new Thread(() -> {
-                theaterParser.parseAllSites(dbHelper);
+                try {
+                    theaterParser.parseAllSites(dbHelper);
+                } catch (Exception e) {
+                    android.util.Log.e("MainActivity", "Ошибка ручного парсинга", e);
+                }
                 runOnUiThread(() -> {
                     fillTable();
                     btnParse.setEnabled(true);
