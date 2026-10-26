@@ -1,6 +1,7 @@
 package com.ExProgs.telegrambot.models;
 
-import android.util.Log;
+import com.ExProgs.telegrambot.AppLog;
+
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.pengrad.telegrambot.TelegramBot;
@@ -17,10 +18,12 @@ public class TheaterBot {
 
     private final TelegramBot bot;
     private final DBHelper dbHelper;
+    private final Runnable parseTrigger;
 
-    public TheaterBot(TelegramBot bot, DBHelper dbHelper) {
+    public TheaterBot(TelegramBot bot, DBHelper dbHelper, Runnable parseTrigger) {
         this.bot = bot;
         this.dbHelper = dbHelper;
+        this.parseTrigger = parseTrigger;
     }
 
     public TelegramBot getBot() {
@@ -44,8 +47,16 @@ public class TheaterBot {
                 unsubscribe(chatId);
                 response = "❌ Вы отписались от рассылки.";
                 break;
+            case "/parse":
+                if (parseTrigger != null) {
+                    parseTrigger.run();
+                    response = "♻️ Парсинг запущен.";
+                } else {
+                    response = "⚠️ Парсинг сейчас недоступен.";
+                }
+                break;
             default:
-                response = "Я понимаю только команды /start и /stop.";
+                response = "Я понимаю команды /start, /stop и /parse.";
         }
 
         bot.execute(new SendMessage(chatId, response));
@@ -84,7 +95,7 @@ public class TheaterBot {
                 Thread.currentThread().interrupt();
                 return;
             } catch (Exception e) {
-                Log.w(TAG, "Failed to send to chat " + sub.getChatId(), e);
+                AppLog.w(TAG, "Failed to send to chat " + sub.getChatId(), e);
             }
         }
         if (delivered >= subscribers.size()) {

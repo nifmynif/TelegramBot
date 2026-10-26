@@ -1,6 +1,7 @@
 package com.ExProgs.telegrambot.models;
 
-import android.util.Log;
+import com.ExProgs.telegrambot.AppLog;
+
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
 
@@ -32,7 +33,7 @@ public class TheaterParser {
             try {
                 parseSite(url, dbHelper, fresh);
             } catch (Exception e) {
-                Log.e(TAG, "Error parsing: " + url, e);
+                AppLog.e(TAG, "Error parsing: " + url, e);
             }
         }
         return fresh;
@@ -77,7 +78,7 @@ public class TheaterParser {
             }
         }
         dbHelper.saveSession(session);
-        Log.i(TAG, "Saved: " + title + " - " + dateTime
+        AppLog.i(TAG, "Saved: " + title + " - " + dateTime
                 + (session.getFreeSeats() >= 0 ? " (мест: " + session.getFreeSeats() + ")" : ""));
         if (session.isOnSale()) {
             fresh.add(session);
@@ -115,7 +116,7 @@ public class TheaterParser {
             existing.setAvailableAgain(true);
             dbHelper.updateSession(existing);
             dbHelper.clearDeliveries(existing.getId());
-            Log.i(TAG, "Available again: " + existing.getTitle() + " - " + existing.getDateTime());
+            AppLog.i(TAG, "Available again: " + existing.getTitle() + " - " + existing.getDateTime());
             fresh.add(existing);
         } else if (seats == 0 && existing.isOnSale()) {
             existing.setStatus(PerformanceSession.STATUS_UNAVAILABLE);

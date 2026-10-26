@@ -7,11 +7,11 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.util.Log;
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.ExProgs.telegrambot.constants.Constants;
 import com.ExProgs.telegrambot.models.PerformanceSession;
+import com.ExProgs.telegrambot.models.TceClient;
 import com.ExProgs.telegrambot.models.TheaterBot;
 import com.ExProgs.telegrambot.models.TheaterParser;
 import com.pengrad.telegrambot.TelegramBot;
@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 public class TelegramBotService extends Service {
     private static final String TAG = "TelegramBotService";
+    public static final String ACTION_PARSE_NOW = "com.ExProgs.telegrambot.PARSE_NOW";
     private static final int PARSE_PERIOD_MINUTES = 60;
     private static final int CLEANUP_PERIOD_HOURS = 24;
     private static final int NOTIFICATION_ID = 1333;
@@ -34,6 +35,8 @@ public class TelegramBotService extends Service {
     private ScheduledExecutorService scheduler;
     private PowerManager.WakeLock wakeLock;
     private NotificationManager notificationManager;
+    private final java.util.concurrent.atomic.AtomicBoolean cycleRunning =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
 
     @Override
     public void onCreate() {
@@ -44,6 +47,12 @@ public class TelegramBotService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        String action = intent != null ? intent.getAction() : null;
+        if (ACTION_PARSE_NOW.equals(action) && theaterBot != null) {
+            parseNow();
+            return START_STICKY;
+        }
+
         NotificationChannel channel = new NotificationChannel(
                 Constants.CHANNEL_ID, "Театральный бот", NotificationManager.IMPORTANCE_LOW);
         NotificationManager nm = getSystemService(NotificationManager.class);
@@ -61,7 +70,7 @@ public class TelegramBotService extends Service {
         startForeground(NOTIFICATION_ID, notification);
 
         if (Constants.TB_TOKEN.isEmpty()) {
-            Log.e(TAG, "TELEGRAM_BOT_TOKEN не настроен");
+            AppLog.e(TAG, "TELEGRAM_BOT_TOKEN не настроен");
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -69,7 +78,7 @@ public class TelegramBotService extends Service {
         try {
             startBot();
         } catch (Exception e) {
-            Log.e(TAG, "Ошибка запуска бота, сервис продолжает работать", e);
+            AppLog.e(TAG, "Ошибка запуска бота, сервис продолжает работать", e);
         }
 
         return START_STICKY;
@@ -83,40 +92,70 @@ public class TelegramBotService extends Service {
         acquireWakeLock();
 
         TelegramBot bot = new TelegramBot(Constants.TB_TOKEN);
-        theaterBot = new TheaterBot(bot, dbHelper);
+        theaterBot = new TheaterBot(bot, dbHelper, this::parseNow);
 
-        bot.setUpdatesListener(updates -> {
-            for (com.pengrad.telegrambot.model.Update update : updates) {
-                try {
-                    theaterBot.processUpdate(update);
-                } catch (Exception e) {
-                    Log.e(TAG, "Ошибка обработки update", e);
-                }
-            }
-            return UpdatesListener.CONFIRMED_UPDATES_ALL;
-        }, e -> Log.e(TAG, "Ошибка получения update от Telegram", e));
+        registerUpdatesListener(bot);
 
         scheduler = Executors.newScheduledThreadPool(2);
 
-        scheduler.scheduleWithFixedDelay(() -> {
-            try {
-                List<PerformanceSession> fresh = theaterParser.parseAllSites(dbHelper);
-                theaterBot.notifySubscribers(fresh);
-                theaterBot.retryPendingDeliveries();
-                reportCycleResult(true);
-            } catch (Exception e) {
-                Log.e(TAG, "Ошибка парсинга/рассылки", e);
-                reportCycleResult(false);
-            }
-        }, 0, PARSE_PERIOD_MINUTES, TimeUnit.MINUTES);
+        scheduler.scheduleWithFixedDelay(this::runParseCycle,
+                0, PARSE_PERIOD_MINUTES, TimeUnit.MINUTES);
 
         scheduler.scheduleWithFixedDelay(() -> {
             try {
                 dbHelper.deleteOldSessions();
             } catch (Exception e) {
-                Log.e(TAG, "Ошибка очистки старых сессий", e);
+                AppLog.e(TAG, "Ошибка очистки старых сессий", e);
             }
         }, CLEANUP_PERIOD_HOURS, CLEANUP_PERIOD_HOURS, TimeUnit.HOURS);
+    }
+
+    private void registerUpdatesListener(TelegramBot bot) {
+        bot.setUpdatesListener(updates -> {
+            for (com.pengrad.telegrambot.model.Update update : updates) {
+                try {
+                    theaterBot.processUpdate(update);
+                } catch (Exception e) {
+                    AppLog.e(TAG, "Ошибка обработки update", e);
+                }
+            }
+            return UpdatesListener.CONFIRMED_UPDATES_ALL;
+        }, e -> {
+            AppLog.e(TAG, "Ошибка получения update от Telegram", e);
+            if (scheduler != null) {
+                scheduler.schedule(() -> {
+                    try {
+                        registerUpdatesListener(bot);
+                        AppLog.i(TAG, "Listener Telegram перерегистрирован");
+                    } catch (Exception ex) {
+                        AppLog.e(TAG, "Не удалось перерегистрировать listener", ex);
+                    }
+                }, 30, TimeUnit.SECONDS);
+            }
+        });
+    }
+
+    private void parseNow() {
+        if (scheduler == null) return;
+        scheduler.execute(this::runParseCycle);
+    }
+
+    private void runParseCycle() {
+        if (!cycleRunning.compareAndSet(false, true)) {
+            AppLog.i(TAG, "Цикл уже выполняется, повторный запуск пропущен");
+            return;
+        }
+        try {
+            List<PerformanceSession> fresh = theaterParser.parseAllSites(dbHelper);
+            theaterBot.notifySubscribers(fresh);
+            theaterBot.retryPendingDeliveries();
+            reportCycleResult(true);
+        } catch (Exception e) {
+            AppLog.e(TAG, "Ошибка парсинга/рассылки", e);
+            reportCycleResult(false);
+        } finally {
+            cycleRunning.set(false);
+        }
     }
 
     private void reportCycleResult(boolean ok) {
@@ -126,19 +165,28 @@ public class TelegramBotService extends Service {
             String text;
             if (ok) {
                 int total = 0;
+                int unknown = 0;
                 for (PerformanceSession session : dbHelper.getAllSessions()) {
-                    if (session.isOnSale() && session.getFreeSeats() > 0) {
-                        total += session.getFreeSeats();
+                    if (session.isOnSale()) {
+                        if (session.getFreeSeats() > 0) {
+                            total += session.getFreeSeats();
+                        } else if (session.getFreeSeats() == TceClient.UNKNOWN) {
+                            unknown++;
+                        }
                     }
                 }
                 text = "Проверка: " + time + " · мест в продаже: " + total;
+                if (unknown > 0) {
+                    text += " · нет данных tce: " + unknown;
+                }
             } else {
                 text = "Проверка: " + time + " · ошибка, следующая попытка через "
                         + PARSE_PERIOD_MINUTES + " мин";
             }
             updateStatusNotification(text);
+            AppLog.i(TAG, "Цикл завершён: " + text);
         } catch (Exception e) {
-            Log.e(TAG, "Ошибка обновления уведомления", e);
+            AppLog.e(TAG, "Ошибка обновления уведомления", e);
         }
     }
 

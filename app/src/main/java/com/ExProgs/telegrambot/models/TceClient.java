@@ -1,6 +1,7 @@
 package com.ExProgs.telegrambot.models;
 
-import android.util.Log;
+import com.ExProgs.telegrambot.AppLog;
+
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -20,7 +21,7 @@ public class TceClient {
     private static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
-    private static final String NO_RESULTS = "Операция не принесла результатов";
+    private static final String NO_RESULTS = "Операция не принесла результат";
     private static final Pattern CHALLENGE_PATTERN = Pattern.compile(
             "<script id=\"anubis_challenge\" type=\"application/json\">(.*?)</script>",
             Pattern.DOTALL);
@@ -32,23 +33,26 @@ public class TceClient {
     public int fetchFreeSeats(String buyUrl) {
         String base = extractParam(buyUrl, "base");
         String data = extractParam(buyUrl, "data");
-        if (base == null || data == null) return UNKNOWN;
+        if (base == null || data == null) {
+            AppLog.w(TAG, "нет base/data в ссылке: " + buyUrl);
+            return UNKNOWN;
+        }
         String apiUrl = "https://tce.by/index.php?view=shows&action=ticket&kind=json"
                 + "&base=" + base + "&data=" + data;
         String body = null;
         try {
             body = getWithAnubis(apiUrl);
-            return parseSeats(body);
+            return parseSeats(body, data);
         } catch (Exception e) {
             String snippet = body != null
                     ? body.substring(0, Math.min(200, body.length()))
                     : "no body";
-            Log.w(TAG, "fetchFreeSeats failed for " + data + ", body: " + snippet, e);
+            AppLog.w(TAG, "fetchFreeSeats failed for " + data + ", body: " + snippet, e);
             return UNKNOWN;
         }
     }
 
-    int parseSeats(String body) throws Exception {
+    int parseSeats(String body, String what) throws Exception {
         JSONObject obj = new JSONObject(body);
         boolean success = obj.optBoolean("success");
         Object payload = obj.opt("data");
@@ -56,6 +60,7 @@ public class TceClient {
             if (payload instanceof String && ((String) payload).startsWith(NO_RESULTS)) {
                 return 0;
             }
+            AppLog.w(TAG, "tce " + what + ": success=false, ответ: " + payload);
             return UNKNOWN;
         }
         if ("encoded".equals(obj.optString("attr")) && payload instanceof String) {
@@ -67,6 +72,7 @@ public class TceClient {
         if (payload instanceof JSONObject) {
             return ((JSONObject) payload).length();
         }
+        AppLog.w(TAG, "tce " + what + ": неожиданный формат ответа: " + payload);
         return UNKNOWN;
     }
 
@@ -78,7 +84,7 @@ public class TceClient {
         solveAnubis(url, response.body());
         Connection.Response retry = get(url);
         if (retry.body().contains("anubis_challenge")) {
-            Log.w(TAG, "Anubis challenge not passed, giving up this round");
+            AppLog.w(TAG, "Anubis challenge not passed, giving up this round");
         }
         return retry.body();
     }
@@ -141,7 +147,7 @@ public class TceClient {
                 + "&redir=" + URLEncoder.encode(challengedUrl, "UTF-8")
                 + "&elapsedTime=" + elapsed;
         Connection.Response pass = get(passUrl);
-        Log.i(TAG, "Anubis passed, nonce=" + nonce);
+        AppLog.i(TAG, "Anubis passed, nonce=" + nonce);
     }
 
     private String extractParam(String url, String name) {

@@ -13,13 +13,11 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
 import com.ExProgs.telegrambot.models.PerformanceSession;
-import com.ExProgs.telegrambot.models.TheaterParser;
 
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private DBHelper dbHelper;
-    private TheaterParser theaterParser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,7 +25,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         dbHelper = new DBHelper(getApplicationContext());
-        theaterParser = new TheaterParser();
 
         if (!isServiceRunning(this, TelegramBotService.class)) {
             startForegroundService(new Intent(this, TelegramBotService.class));
@@ -37,18 +34,22 @@ public class MainActivity extends AppCompatActivity {
         btnParse.setOnClickListener(v -> {
             btnParse.setEnabled(false);
             btnParse.setText("Парсинг...");
-            new Thread(() -> {
-                try {
-                    theaterParser.parseAllSites(dbHelper);
-                } catch (Exception e) {
-                    android.util.Log.e("MainActivity", "Ошибка ручного парсинга", e);
-                }
-                runOnUiThread(() -> {
-                    fillTable();
-                    btnParse.setEnabled(true);
-                    btnParse.setText("Парсить сейчас");
-                });
-            }).start();
+            Intent intent = new Intent(this, TelegramBotService.class);
+            intent.setAction(TelegramBotService.ACTION_PARSE_NOW);
+            startService(intent);
+            new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                fillTable();
+                btnParse.setEnabled(true);
+                btnParse.setText("Парсить сейчас");
+            }, 30000);
+        });
+
+        Button btnShareLog = findViewById(R.id.btn_share_log);
+        btnShareLog.setOnClickListener(v -> {
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("text/plain");
+            send.putExtra(Intent.EXTRA_TEXT, AppLog.dump());
+            startActivity(Intent.createChooser(send, "Логи"));
         });
 
         fillTable();
@@ -84,6 +85,9 @@ public class MainActivity extends AppCompatActivity {
             row.addView(makeCell(session.isSent() ? "✓" : "◌", false));
             table.addView(row);
         }
+
+        TextView logText = findViewById(R.id.log_text);
+        logText.setText(AppLog.dump().isEmpty() ? "Логов пока нет" : AppLog.dump());
     }
 
     private TextView makeCell(String text, boolean bold) {
