@@ -53,6 +53,28 @@ public class MainActivity extends AppCompatActivity {
         });
 
         fillTable();
+
+        requestBatteryExemptionIfNeeded();
+    }
+
+    private void requestBatteryExemptionIfNeeded() {
+        android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (pm == null || pm.isIgnoringBatteryOptimizations(getPackageName())) return;
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Разрешение для фоновой работы")
+                .setMessage("Android усыпляет приложение при выключенном экране, и часовая проверка билетов не запускается. Отключите оптимизацию батареи для этого приложения в следующем окне.")
+                .setPositiveButton("Открыть настройки", (d, w) -> {
+                    try {
+                        startActivity(new Intent(
+                                android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                android.net.Uri.parse("package:" + getPackageName())));
+                    } catch (Exception e) {
+                        startActivity(new Intent(
+                                android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                    }
+                })
+                .setNegativeButton("Позже", null)
+                .show();
     }
 
     @Override

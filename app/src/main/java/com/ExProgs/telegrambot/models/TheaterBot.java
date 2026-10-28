@@ -79,6 +79,40 @@ public class TheaterBot {
         }
     }
 
+    public void broadcastText(String text) {
+        List<TelegramSubscriber> subscribers = dbHelper.findAllActiveSubscribers();
+        for (TelegramSubscriber sub : subscribers) {
+            for (int attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    SendResponse response = bot.execute(new SendMessage(sub.getChatId(), text));
+                    if (response.isOk()) {
+                        break;
+                    }
+                    AppLog.w(TAG, "Status send not ok, code=" + response.errorCode()
+                            + ", chat=" + sub.getChatId() + ", attempt=" + attempt);
+                    if (response.errorCode() != 429 && response.errorCode() < 500) {
+                        break;
+                    }
+                } catch (Exception e) {
+                    AppLog.w(TAG, "Failed to send status to chat " + sub.getChatId()
+                            + ", attempt=" + attempt, e);
+                }
+                try {
+                    Thread.sleep(30_000L);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+            try {
+                Thread.sleep(SEND_PAUSE_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
     private void deliverToSubscribers(PerformanceSession session, List<TelegramSubscriber> subscribers) {
         if (subscribers.isEmpty()) return;
         int delivered = 0;

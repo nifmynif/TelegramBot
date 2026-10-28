@@ -17,14 +17,21 @@ import com.ExProgs.telegrambot.models.TheaterParser;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Dns;
+import okhttp3.OkHttpClient;
+
 public class TelegramBotService extends Service {
     private static final String TAG = "TelegramBotService";
     public static final String ACTION_PARSE_NOW = "com.ExProgs.telegrambot.PARSE_NOW";
+    public static final String ACTION_ALARM_PARSE = "com.ExProgs.telegrambot.ALARM_PARSE";
     private static final int PARSE_PERIOD_MINUTES = 60;
     private static final int CLEANUP_PERIOD_HOURS = 24;
     private static final int NOTIFICATION_ID = 1333;
@@ -37,6 +44,7 @@ public class TelegramBotService extends Service {
     private NotificationManager notificationManager;
     private final java.util.concurrent.atomic.AtomicBoolean cycleRunning =
             new java.util.concurrent.atomic.AtomicBoolean(false);
+    private volatile long lastUpdateErrorLog;
 
     @Override
     public void onCreate() {
@@ -48,6 +56,12 @@ public class TelegramBotService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : null;
+        if (ACTION_ALARM_PARSE.equals(action)) {
+            keepAwake();
+            parseNow();
+            scheduleNextAlarm();
+            return START_STICKY;
+        }
         if (ACTION_PARSE_NOW.equals(action) && theaterBot != null) {
             parseNow();
             return START_STICKY;
@@ -91,15 +105,30 @@ public class TelegramBotService extends Service {
         }
         acquireWakeLock();
 
-        TelegramBot bot = new TelegramBot(Constants.TB_TOKEN);
+        OkHttpClient httpClient = new OkHttpClient.Builder()
+                .dns(hostname -> {
+                    List<InetAddress> all = Dns.SYSTEM.lookup(hostname);
+                    List<InetAddress> ipv4 = new ArrayList<>();
+                    for (InetAddress addr : all) {
+                        if (addr instanceof Inet4Address) {
+                            ipv4.add(addr);
+                        }
+                    }
+                    return ipv4.isEmpty() ? all : ipv4;
+                })
+                .protocols(java.util.Collections.singletonList(okhttp3.Protocol.HTTP_1_1))
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build();
+        TelegramBot bot = new TelegramBot.Builder(Constants.TB_TOKEN)
+                .okHttpClient(httpClient)
+                .updateListenerSleep(10_000L)
+                .build();
         theaterBot = new TheaterBot(bot, dbHelper, this::parseNow);
 
         registerUpdatesListener(bot);
 
         scheduler = Executors.newScheduledThreadPool(2);
-
-        scheduler.scheduleWithFixedDelay(this::runParseCycle,
-                0, PARSE_PERIOD_MINUTES, TimeUnit.MINUTES);
 
         scheduler.scheduleWithFixedDelay(() -> {
             try {
@@ -108,6 +137,29 @@ public class TelegramBotService extends Service {
                 AppLog.e(TAG, "Ошибка очистки старых сессий", e);
             }
         }, CLEANUP_PERIOD_HOURS, CLEANUP_PERIOD_HOURS, TimeUnit.HOURS);
+
+        scheduleNextAlarm();
+        parseNow();
+    }
+
+    private void scheduleNextAlarm() {
+        android.app.AlarmManager am = getSystemService(android.app.AlarmManager.class);
+        if (am == null) return;
+        Intent alarmIntent = new Intent(this, TelegramBotService.class)
+                .setAction(ACTION_ALARM_PARSE);
+        android.app.PendingIntent pendingIntent = android.app.PendingIntent.getService(
+                this, 0, alarmIntent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT
+                        | android.app.PendingIntent.FLAG_IMMUTABLE);
+        am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + PARSE_PERIOD_MINUTES * 60_000L, pendingIntent);
+        AppLog.i(TAG, "Будильник парсинга запланирован через " + PARSE_PERIOD_MINUTES + " мин");
+    }
+
+    private void keepAwake() {
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.acquire(10 * 60_000L);
+        }
     }
 
     private void registerUpdatesListener(TelegramBot bot) {
@@ -121,16 +173,10 @@ public class TelegramBotService extends Service {
             }
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
         }, e -> {
-            AppLog.e(TAG, "Ошибка получения update от Telegram", e);
-            if (scheduler != null) {
-                scheduler.schedule(() -> {
-                    try {
-                        registerUpdatesListener(bot);
-                        AppLog.i(TAG, "Listener Telegram перерегистрирован");
-                    } catch (Exception ex) {
-                        AppLog.e(TAG, "Не удалось перерегистрировать listener", ex);
-                    }
-                }, 30, TimeUnit.SECONDS);
+            long now = System.currentTimeMillis();
+            if (now - lastUpdateErrorLog > 60_000L) {
+                lastUpdateErrorLog = now;
+                AppLog.e(TAG, "Ошибка получения update от Telegram (логирую не чаще раза в минуту)", e);
             }
         });
     }
@@ -150,11 +196,39 @@ public class TelegramBotService extends Service {
             theaterBot.notifySubscribers(fresh);
             theaterBot.retryPendingDeliveries();
             reportCycleResult(true);
+            broadcastCycleSummary(fresh.size());
         } catch (Exception e) {
             AppLog.e(TAG, "Ошибка парсинга/рассылки", e);
             reportCycleResult(false);
+            broadcastCycleSummary(-1);
         } finally {
             cycleRunning.set(false);
+        }
+    }
+
+    private void broadcastCycleSummary(int freshCount) {
+        try {
+            if (theaterBot == null) return;
+            String time = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                    .format(new java.util.Date());
+            String text;
+            if (freshCount < 0) {
+                text = "⚠️ Парсинг в " + time + " завершился ошибкой, следующая попытка через "
+                        + PARSE_PERIOD_MINUTES + " мин";
+            } else {
+                int total = 0;
+                for (PerformanceSession session : dbHelper.getAllSessions()) {
+                    if (session.isOnSale() && session.getFreeSeats() > 0) {
+                        total += session.getFreeSeats();
+                    }
+                }
+                text = "🔄 Парсинг завершён в " + time + " — "
+                        + (freshCount == 0 ? "ничего нового" : "новых показов: " + freshCount)
+                        + (total > 0 ? " (мест в продаже: " + total + ")" : "");
+            }
+            theaterBot.broadcastText(text);
+        } catch (Exception e) {
+            AppLog.e(TAG, "Ошибка рассылки сводки парсинга", e);
         }
     }
 
