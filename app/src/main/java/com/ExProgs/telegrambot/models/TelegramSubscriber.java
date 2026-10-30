@@ -7,6 +7,7 @@ public class TelegramSubscriber {
     private String firstName;
     private String lastName;
     private boolean active;
+    private boolean wantsDigest;
 
     public long getId() { return id; }
     public void setId(long id) { this.id = id; }
@@ -25,4 +26,7 @@ public class TelegramSubscriber {
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+
+    public boolean isWantsDigest() { return wantsDigest; }
+    public void setWantsDigest(boolean wantsDigest) { this.wantsDigest = wantsDigest; }
 }

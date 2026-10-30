@@ -42,8 +42,7 @@ public class TelegramBotService extends Service {
     private ScheduledExecutorService scheduler;
     private PowerManager.WakeLock wakeLock;
     private NotificationManager notificationManager;
-    private final java.util.concurrent.atomic.AtomicBoolean cycleRunning =
-            new java.util.concurrent.atomic.AtomicBoolean(false);
+    private volatile long lastCycleStart;
     private volatile long lastUpdateErrorLog;
 
     @Override
@@ -157,7 +156,7 @@ public class TelegramBotService extends Service {
     }
 
     private void keepAwake() {
-        if (wakeLock != null && wakeLock.isHeld()) {
+        if (wakeLock != null) {
             wakeLock.acquire(10 * 60_000L);
         }
     }
@@ -187,10 +186,12 @@ public class TelegramBotService extends Service {
     }
 
     private void runParseCycle() {
-        if (!cycleRunning.compareAndSet(false, true)) {
+        long now = System.currentTimeMillis();
+        if (now - lastCycleStart < 10 * 60_000L) {
             AppLog.i(TAG, "Цикл уже выполняется, повторный запуск пропущен");
             return;
         }
+        lastCycleStart = now;
         try {
             List<PerformanceSession> fresh = theaterParser.parseAllSites(dbHelper);
             theaterBot.notifySubscribers(fresh);
@@ -201,8 +202,6 @@ public class TelegramBotService extends Service {
             AppLog.e(TAG, "Ошибка парсинга/рассылки", e);
             reportCycleResult(false);
             broadcastCycleSummary(-1);
-        } finally {
-            cycleRunning.set(false);
         }
     }
 

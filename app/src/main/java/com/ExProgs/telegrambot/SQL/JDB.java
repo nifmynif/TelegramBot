@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import androidx.annotation.Nullable;
 
 public class JDB extends SQLiteOpenHelper {
-    public static final int DATABASE_VERSION = 24;
+    public static final int DATABASE_VERSION = 25;
     public static final String DATABASE_NAME = "theaterDB";
 
     public static final String TABLE_SESSIONS = "performance_sessions";
@@ -28,6 +28,7 @@ public class JDB extends SQLiteOpenHelper {
     public static final String COL_FIRST_NAME = "first_name";
     public static final String COL_LAST_NAME = "last_name";
     public static final String COL_IS_ACTIVE = "is_active";
+    public static final String COL_WANTS_DIGEST = "wants_digest";
 
     public static final String COL_SESSION_ID = "session_id";
     public static final String COL_DELIVERED_AT = "delivered_at";
@@ -54,7 +55,8 @@ public class JDB extends SQLiteOpenHelper {
                 + COL_USERNAME + " TEXT,"
                 + COL_FIRST_NAME + " TEXT,"
                 + COL_LAST_NAME + " TEXT,"
-                + COL_IS_ACTIVE + " INTEGER DEFAULT 1"
+                + COL_IS_ACTIVE + " INTEGER DEFAULT 1,"
+                + COL_WANTS_DIGEST + " INTEGER DEFAULT 0"
                 + ")");
         db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_DELIVERIES + " ("
                 + COL_SESSION_ID + " INTEGER,"
@@ -66,13 +68,17 @@ public class JDB extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion == 22 || oldVersion == 23) {
+        if (oldVersion >= 22 && oldVersion <= 24) {
             if (oldVersion == 22) {
                 db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
                         + COL_STATUS + " INTEGER DEFAULT 1");
             }
-            db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
-                    + COL_FREE_SEATS + " INTEGER DEFAULT -1");
+            if (oldVersion <= 23) {
+                db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
+                        + COL_FREE_SEATS + " INTEGER DEFAULT -1");
+            }
+            db.execSQL("ALTER TABLE " + TABLE_SUBSCRIBERS + " ADD COLUMN "
+                    + COL_WANTS_DIGEST + " INTEGER DEFAULT 0");
         } else {
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_SESSIONS);
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_SUBSCRIBERS);

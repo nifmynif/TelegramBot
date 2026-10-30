@@ -147,6 +147,7 @@ public class DBHelper {
         cv.put(JDB.COL_FIRST_NAME, subscriber.getFirstName());
         cv.put(JDB.COL_LAST_NAME, subscriber.getLastName());
         cv.put(JDB.COL_IS_ACTIVE, subscriber.isActive() ? 1 : 0);
+        cv.put(JDB.COL_WANTS_DIGEST, subscriber.isWantsDigest() ? 1 : 0);
         int updated = db().update(JDB.TABLE_SUBSCRIBERS, cv,
                 JDB.COL_CHAT_ID + " = ?", new String[]{String.valueOf(subscriber.getChatId())});
         if (updated == 0) {
@@ -159,6 +160,20 @@ public class DBHelper {
         SQLiteDatabase db = jdb.getReadableDatabase();
         Cursor cursor = db.query(JDB.TABLE_SUBSCRIBERS, null,
                 JDB.COL_IS_ACTIVE + " = 1", null, null, null, null);
+        List<TelegramSubscriber> list = new ArrayList<>();
+        while (cursor.moveToNext()) {
+            list.add(cursorToSubscriber(cursor));
+        }
+        cursor.close();
+        return list;
+    }
+
+    @SuppressLint("Range")
+    public List<TelegramSubscriber> findAllDigestSubscribers() {
+        SQLiteDatabase db = jdb.getReadableDatabase();
+        Cursor cursor = db.query(JDB.TABLE_SUBSCRIBERS, null,
+                JDB.COL_IS_ACTIVE + " = 1 AND " + JDB.COL_WANTS_DIGEST + " = 1",
+                null, null, null, null);
         List<TelegramSubscriber> list = new ArrayList<>();
         while (cursor.moveToNext()) {
             list.add(cursorToSubscriber(cursor));
@@ -205,6 +220,8 @@ public class DBHelper {
         sub.setFirstName(cursor.getString(cursor.getColumnIndex(JDB.COL_FIRST_NAME)));
         sub.setLastName(cursor.getString(cursor.getColumnIndex(JDB.COL_LAST_NAME)));
         sub.setActive(cursor.getInt(cursor.getColumnIndex(JDB.COL_IS_ACTIVE)) == 1);
+        int digestIdx = cursor.getColumnIndex(JDB.COL_WANTS_DIGEST);
+        sub.setWantsDigest(digestIdx >= 0 && cursor.getInt(digestIdx) == 1);
         return sub;
     }
 }

@@ -55,8 +55,12 @@ public class TheaterBot {
                     response = "⚠️ Парсинг сейчас недоступен.";
                 }
                 break;
+            case "/digest":
+                response = toggleDigest(chatId);
+                break;
             default:
-                response = "Я понимаю команды /start, /stop и /parse.";
+                response = "Я понимаю команды /start, /stop, /parse и /digest "
+                        + "(/digest — ежечасные сводки вкл/выкл).";
         }
 
         bot.execute(new SendMessage(chatId, response));
@@ -80,7 +84,7 @@ public class TheaterBot {
     }
 
     public void broadcastText(String text) {
-        List<TelegramSubscriber> subscribers = dbHelper.findAllActiveSubscribers();
+        List<TelegramSubscriber> subscribers = dbHelper.findAllDigestSubscribers();
         for (TelegramSubscriber sub : subscribers) {
             for (int attempt = 1; attempt <= 3; attempt++) {
                 try {
@@ -98,7 +102,7 @@ public class TheaterBot {
                             + ", attempt=" + attempt, e);
                 }
                 try {
-                    Thread.sleep(30_000L);
+                    Thread.sleep(15_000L);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     return;
@@ -172,6 +176,18 @@ public class TheaterBot {
         return header + "\n*" + escapeMarkdownV2(session.getTitle()) + "*\n"
                 + "📅 " + escapeMarkdownV2(session.getDateTime()) + seats + "\n"
                 + "🎟️ [Купить билеты](" + session.getBuyUrl() + ")";
+    }
+
+    private String toggleDigest(long chatId) {
+        TelegramSubscriber sub = dbHelper.findSubscriberByChatId(chatId);
+        if (sub == null) {
+            return "Сначала отправьте /start.";
+        }
+        sub.setWantsDigest(!sub.isWantsDigest());
+        dbHelper.saveSubscriber(sub);
+        return sub.isWantsDigest()
+                ? "✅ Ежечасные сводки включены."
+                : "🔕 Ежечасные сводки выключены.";
     }
 
     private void registerSubscriber(long chatId, com.pengrad.telegrambot.model.User from) {
