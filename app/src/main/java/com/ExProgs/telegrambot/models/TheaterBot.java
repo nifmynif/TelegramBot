@@ -84,7 +84,13 @@ public class TheaterBot {
     }
 
     public void broadcastText(String text) {
-        List<TelegramSubscriber> subscribers = dbHelper.findAllDigestSubscribers();
+        broadcastText(text, false);
+    }
+
+    public void broadcastText(String text, boolean allSubscribers) {
+        List<TelegramSubscriber> subscribers = allSubscribers
+                ? dbHelper.findAllActiveSubscribers()
+                : dbHelper.findAllDigestSubscribers();
         for (TelegramSubscriber sub : subscribers) {
             for (int attempt = 1; attempt <= 3; attempt++) {
                 try {

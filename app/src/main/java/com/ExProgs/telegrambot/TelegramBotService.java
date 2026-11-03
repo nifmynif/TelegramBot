@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
+import android.os.BatteryManager;
 import android.os.IBinder;
 import android.os.PowerManager;
 
@@ -35,6 +36,7 @@ public class TelegramBotService extends Service {
     private static final int PARSE_PERIOD_MINUTES = 60;
     private static final int CLEANUP_PERIOD_HOURS = 24;
     private static final int NOTIFICATION_ID = 1333;
+    private static final int BATTERY_LOW_PERCENT = 20;
 
     private DBHelper dbHelper;
     private TheaterBot theaterBot;
@@ -44,6 +46,7 @@ public class TelegramBotService extends Service {
     private NotificationManager notificationManager;
     private volatile long lastCycleStart;
     private volatile long lastUpdateErrorLog;
+    private volatile boolean lowBatteryNotified;
 
     @Override
     public void onCreate() {
@@ -192,6 +195,7 @@ public class TelegramBotService extends Service {
             return;
         }
         lastCycleStart = now;
+        checkBatteryLevel();
         try {
             List<PerformanceSession> fresh = theaterParser.parseAllSites(dbHelper);
             theaterBot.notifySubscribers(fresh);
@@ -202,6 +206,30 @@ public class TelegramBotService extends Service {
             AppLog.e(TAG, "Ошибка парсинга/рассылки", e);
             reportCycleResult(false);
             broadcastCycleSummary(-1);
+        }
+    }
+
+    private void checkBatteryLevel() {
+        if (theaterBot == null) return;
+        try {
+            BatteryManager bm = getSystemService(BatteryManager.class);
+            if (bm == null) return;
+            int level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+            if (level < 0 || level > 100) return;
+            int status = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS);
+            boolean charging = status == BatteryManager.BATTERY_STATUS_CHARGING
+                    || status == BatteryManager.BATTERY_STATUS_FULL;
+            if (level > BATTERY_LOW_PERCENT) {
+                lowBatteryNotified = false;
+                return;
+            }
+            if (charging || lowBatteryNotified) return;
+            lowBatteryNotified = true;
+            AppLog.i(TAG, "Низкий заряд батареи: " + level + "%");
+            theaterBot.broadcastText("🔋 Батарея телефона " + level
+                    + "% — поставьте телефон на зарядку, иначе бот остановится", true);
+        } catch (Exception e) {
+            AppLog.e(TAG, "Ошибка проверки уровня батареи", e);
         }
     }
 
