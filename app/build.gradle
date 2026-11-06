@@ -12,7 +12,7 @@ def resolveConfigValue = { String name, String defaultValue = "" ->
 
 
 android {
-    namespace 'com.ExProgs.telegrambot'
+    namespace = 'com.ExProgs.telegrambot'
     compileSdk 33
 
     defaultConfig {
@@ -26,7 +26,7 @@ android {
     }
 
     buildFeatures {
-        buildConfig true
+        buildConfig = true
     }
 
     buildTypes {

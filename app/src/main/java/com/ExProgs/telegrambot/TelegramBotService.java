@@ -36,7 +36,7 @@ public class TelegramBotService extends Service {
     private static final int PARSE_PERIOD_MINUTES = 60;
     private static final int CLEANUP_PERIOD_HOURS = 24;
     private static final int NOTIFICATION_ID = 1333;
-    private static final int BATTERY_LOW_PERCENT = 20;
+    private static final int BATTERY_LOW_PERCENT = 30;
 
     private DBHelper dbHelper;
     private TheaterBot theaterBot;
@@ -126,7 +126,7 @@ public class TelegramBotService extends Service {
                 .okHttpClient(httpClient)
                 .updateListenerSleep(10_000L)
                 .build();
-        theaterBot = new TheaterBot(bot, dbHelper, this::parseNow);
+        theaterBot = new TheaterBot(bot, dbHelper, this::parseNow, this);
 
         registerUpdatesListener(bot);
 
@@ -209,21 +209,36 @@ public class TelegramBotService extends Service {
         }
     }
 
+    public long getLastParseTimeMillis() {
+        return lastCycleStart;
+    }
+
+    public int getBatteryPercent() {
+        BatteryManager bm = getSystemService(BatteryManager.class);
+        if (bm == null) return -1;
+        int level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        if (level < 0 || level > 100) return -1;
+        return level;
+    }
+
+    public boolean isBatteryCharging() {
+        BatteryManager bm = getSystemService(BatteryManager.class);
+        if (bm == null) return false;
+        int status = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS);
+        return status == BatteryManager.BATTERY_STATUS_CHARGING
+                || status == BatteryManager.BATTERY_STATUS_FULL;
+    }
+
     private void checkBatteryLevel() {
         if (theaterBot == null) return;
         try {
-            BatteryManager bm = getSystemService(BatteryManager.class);
-            if (bm == null) return;
-            int level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-            if (level < 0 || level > 100) return;
-            int status = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS);
-            boolean charging = status == BatteryManager.BATTERY_STATUS_CHARGING
-                    || status == BatteryManager.BATTERY_STATUS_FULL;
+            int level = getBatteryPercent();
+            if (level < 0) return;
             if (level > BATTERY_LOW_PERCENT) {
                 lowBatteryNotified = false;
                 return;
             }
-            if (charging || lowBatteryNotified) return;
+            if (isBatteryCharging() || lowBatteryNotified) return;
             lowBatteryNotified = true;
             AppLog.i(TAG, "Низкий заряд батареи: " + level + "%");
             theaterBot.broadcastText("🔋 Батарея телефона " + level

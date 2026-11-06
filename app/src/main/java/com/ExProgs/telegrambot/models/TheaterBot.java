@@ -1,6 +1,7 @@
 package com.ExProgs.telegrambot.models;
 
 import com.ExProgs.telegrambot.AppLog;
+import com.ExProgs.telegrambot.TelegramBotService;
 
 
 import com.ExProgs.telegrambot.SQL.DBHelper;
@@ -19,11 +20,14 @@ public class TheaterBot {
     private final TelegramBot bot;
     private final DBHelper dbHelper;
     private final Runnable parseTrigger;
+    private final TelegramBotService service;
 
-    public TheaterBot(TelegramBot bot, DBHelper dbHelper, Runnable parseTrigger) {
+    public TheaterBot(TelegramBot bot, DBHelper dbHelper, Runnable parseTrigger,
+                      TelegramBotService service) {
         this.bot = bot;
         this.dbHelper = dbHelper;
         this.parseTrigger = parseTrigger;
+        this.service = service;
     }
 
     public TelegramBot getBot() {
@@ -58,9 +62,12 @@ public class TheaterBot {
             case "/digest":
                 response = toggleDigest(chatId);
                 break;
+            case "/info":
+                response = buildInfo();
+                break;
             default:
-                response = "Я понимаю команды /start, /stop, /parse и /digest "
-                        + "(/digest — ежечасные сводки вкл/выкл).";
+                response = "Я понимаю команды /start, /stop, /parse, /digest и /info "
+                        + "(/digest — ежечасные сводки вкл/выкл, /info — статус бота).";
         }
 
         bot.execute(new SendMessage(chatId, response));
@@ -182,6 +189,25 @@ public class TheaterBot {
         return header + "\n*" + escapeMarkdownV2(session.getTitle()) + "*\n"
                 + "📅 " + escapeMarkdownV2(session.getDateTime()) + seats + "\n"
                 + "🎟️ [Купить билеты](" + session.getBuyUrl() + ")";
+    }
+
+    private String buildInfo() {
+        String parseTime = "ещё не было";
+        long last = service.getLastParseTimeMillis();
+        if (last > 0) {
+            java.util.Calendar now = java.util.Calendar.getInstance();
+            java.util.Calendar then = java.util.Calendar.getInstance();
+            then.setTimeInMillis(last);
+            String pattern = now.get(java.util.Calendar.DATE) == then.get(java.util.Calendar.DATE)
+                    ? "HH:mm" : "dd.MM HH:mm";
+            parseTime = new java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault())
+                    .format(then.getTime());
+        }
+        int level = service.getBatteryPercent();
+        String battery = level < 0
+                ? "нет данных"
+                : level + "%" + (service.isBatteryCharging() ? " (заряжается)" : "");
+        return "⏱ Последний парсинг: " + parseTime + "\n🔋 Батарея телефона: " + battery;
     }
 
     private String toggleDigest(long chatId) {
