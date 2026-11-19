@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.ExProgs.telegrambot.models.PerformanceSession;
+import com.ExProgs.telegrambot.models.SessionNormalizer;
 import com.ExProgs.telegrambot.models.TelegramSubscriber;
 
 import java.util.ArrayList;
@@ -23,8 +24,10 @@ public class DBHelper {
     public PerformanceSession findSession(String title, String dateTime) {
         SQLiteDatabase db = jdb.getReadableDatabase();
         Cursor cursor = db.query(JDB.TABLE_SESSIONS, null,
-                JDB.COL_TITLE + " = ? AND " + JDB.COL_DATE_TIME + " = ?",
-                new String[]{title, dateTime}, null, null, null);
+                JDB.COL_TITLE_NORM + " = ? AND " + JDB.COL_DATE_NORM + " = ?",
+                new String[]{SessionNormalizer.normalizeTitle(title),
+                        SessionNormalizer.normalizeDateTime(dateTime)},
+                null, null, null);
         PerformanceSession session = null;
         if (cursor.moveToFirst()) {
             session = cursorToSession(cursor);
@@ -42,9 +45,15 @@ public class DBHelper {
         cv.put(JDB.COL_CREATED_AT, System.currentTimeMillis());
         cv.put(JDB.COL_STATUS, session.getStatus());
         cv.put(JDB.COL_FREE_SEATS, session.getFreeSeats());
+        cv.put(JDB.COL_TITLE_NORM, SessionNormalizer.normalizeTitle(session.getTitle()));
+        cv.put(JDB.COL_DATE_NORM, SessionNormalizer.normalizeDateTime(session.getDateTime()));
         long id = jdb.getWritableDatabase().insert(JDB.TABLE_SESSIONS, null, cv);
         if (id > 0) {
             session.setId(id);
+        } else {
+            com.ExProgs.telegrambot.AppLog.w("DBHelper",
+                    "insert сессии не удался (дубликат нормализованной идентичности?): "
+                            + session.getTitle() + " / " + session.getDateTime());
         }
     }
 
@@ -54,6 +63,8 @@ public class DBHelper {
         cv.put(JDB.COL_SENT, session.isSent() ? 1 : 0);
         cv.put(JDB.COL_STATUS, session.getStatus());
         cv.put(JDB.COL_FREE_SEATS, session.getFreeSeats());
+        cv.put(JDB.COL_TITLE_NORM, SessionNormalizer.normalizeTitle(session.getTitle()));
+        cv.put(JDB.COL_DATE_NORM, SessionNormalizer.normalizeDateTime(session.getDateTime()));
         jdb.getWritableDatabase().update(JDB.TABLE_SESSIONS, cv,
                 JDB.COL_ID + " = ?", new String[]{String.valueOf(session.getId())});
     }

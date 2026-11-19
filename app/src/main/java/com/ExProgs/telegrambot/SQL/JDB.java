@@ -1,13 +1,17 @@
 package com.ExProgs.telegrambot.SQL;
 
+import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
 import androidx.annotation.Nullable;
 
+import com.ExProgs.telegrambot.models.SessionNormalizer;
+
 public class JDB extends SQLiteOpenHelper {
-    public static final int DATABASE_VERSION = 25;
+    public static final int DATABASE_VERSION = 26;
     public static final String DATABASE_NAME = "theaterDB";
 
     public static final String TABLE_SESSIONS = "performance_sessions";
@@ -22,6 +26,8 @@ public class JDB extends SQLiteOpenHelper {
     public static final String COL_CREATED_AT = "created_at";
     public static final String COL_STATUS = "status";
     public static final String COL_FREE_SEATS = "free_seats";
+    public static final String COL_TITLE_NORM = "title_norm";
+    public static final String COL_DATE_NORM = "date_norm";
 
     public static final String COL_CHAT_ID = "chat_id";
     public static final String COL_USERNAME = "username";
@@ -47,7 +53,9 @@ public class JDB extends SQLiteOpenHelper {
                 + COL_SENT + " INTEGER DEFAULT 0,"
                 + COL_CREATED_AT + " INTEGER,"
                 + COL_STATUS + " INTEGER DEFAULT 1,"
-                + COL_FREE_SEATS + " INTEGER DEFAULT -1"
+                + COL_FREE_SEATS + " INTEGER DEFAULT -1,"
+                + COL_TITLE_NORM + " TEXT DEFAULT '',"
+                + COL_DATE_NORM + " TEXT DEFAULT ''"
                 + ")");
         db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_SUBSCRIBERS + " ("
                 + COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -64,6 +72,12 @@ public class JDB extends SQLiteOpenHelper {
                 + COL_DELIVERED_AT + " INTEGER,"
                 + "PRIMARY KEY (" + COL_SESSION_ID + ", " + COL_CHAT_ID + ")"
                 + ")");
+        createIdentityIndex(db);
+    }
+
+    private void createIdentityIndex(SQLiteDatabase db) {
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_identity ON "
+                + TABLE_SESSIONS + " (" + COL_TITLE_NORM + ", " + COL_DATE_NORM + ")");
     }
 
     @Override
@@ -79,11 +93,54 @@ public class JDB extends SQLiteOpenHelper {
             }
             db.execSQL("ALTER TABLE " + TABLE_SUBSCRIBERS + " ADD COLUMN "
                     + COL_WANTS_DIGEST + " INTEGER DEFAULT 0");
-        } else {
+        } else if (oldVersion < 22) {
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_SESSIONS);
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_SUBSCRIBERS);
         }
+        if (oldVersion <= 25) {
+            db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
+                    + COL_TITLE_NORM + " TEXT DEFAULT ''");
+            db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
+                    + COL_DATE_NORM + " TEXT DEFAULT ''");
+            backfillNorms(db);
+            dedupeSessions(db);
+        }
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_DELIVERIES);
         onCreate(db);
+    }
+
+    private void backfillNorms(SQLiteDatabase db) {
+        Cursor cursor = db.query(TABLE_SESSIONS,
+                new String[]{COL_ID, COL_TITLE, COL_DATE_TIME},
+                null, null, null, null, null);
+        try {
+            int idIdx = cursor.getColumnIndex(COL_ID);
+            int titleIdx = cursor.getColumnIndex(COL_TITLE);
+            int dateIdx = cursor.getColumnIndex(COL_DATE_TIME);
+            while (cursor.moveToNext()) {
+                ContentValues cv = new ContentValues();
+                cv.put(COL_TITLE_NORM,
+                        SessionNormalizer.normalizeTitle(cursor.getString(titleIdx)));
+                cv.put(COL_DATE_NORM,
+                        SessionNormalizer.normalizeDateTime(cursor.getString(dateIdx)));
+                db.update(TABLE_SESSIONS, cv, COL_ID + " = ?",
+                        new String[]{String.valueOf(cursor.getLong(idIdx))});
+            }
+        } finally {
+            cursor.close();
+        }
+    }
+
+    private void dedupeSessions(SQLiteDatabase db) {
+        // после нормализации разные сырые строки могли схлопнуться в одну
+        // идентичность — оставляем старейшую запись, дубликаты удаляем
+        db.execSQL("DELETE FROM " + TABLE_DELIVERIES + " WHERE " + COL_SESSION_ID
+                + " NOT IN (SELECT " + COL_ID + " FROM (SELECT MIN(" + COL_ID + ") AS "
+                + COL_ID + " FROM " + TABLE_SESSIONS + " GROUP BY " + COL_TITLE_NORM
+                + ", " + COL_DATE_NORM + "))");
+        db.execSQL("DELETE FROM " + TABLE_SESSIONS + " WHERE " + COL_ID
+                + " NOT IN (SELECT " + COL_ID + " FROM (SELECT MIN(" + COL_ID + ") AS "
+                + COL_ID + " FROM " + TABLE_SESSIONS + " GROUP BY " + COL_TITLE_NORM
+                + ", " + COL_DATE_NORM + "))");
     }
 }
