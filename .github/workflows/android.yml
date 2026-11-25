@@ -18,12 +18,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Setup Android SDK components
-        run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager --install "platforms;android-33" "build-tools;34.0.0" > /dev/null
+      - uses: ./.github/actions/setup-android-sdk
 
       - name: Build debug APK
         run: |
@@ -52,12 +47,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Setup Android SDK components
-        run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager --install "platforms;android-33" "build-tools;34.0.0" > /dev/null
+      - uses: ./.github/actions/setup-android-sdk
 
       - name: Build APK for release
         run: |
