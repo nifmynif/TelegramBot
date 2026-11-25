@@ -19,8 +19,8 @@ android {
         applicationId "com.ExProgs.telegrambot"
         minSdk 26
         targetSdk 33
-        versionCode 3
-        versionName "2.1"
+        versionCode 4
+        versionName "2.1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "TELEGRAM_BOT_TOKEN", "\"${resolveConfigValue("TELEGRAM_BOT_TOKEN", "8809910255:AAFp52M-qvDPaJtI0D05pTJMeIKXp7ANw0o")}\""
     }
