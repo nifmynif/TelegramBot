@@ -8,9 +8,12 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import androidx.annotation.Nullable;
 
+import com.ExProgs.telegrambot.AppLog;
 import com.ExProgs.telegrambot.models.SessionNormalizer;
 
 public class JDB extends SQLiteOpenHelper {
+    private static final String TAG = "JDB";
+
     public static final int DATABASE_VERSION = 26;
     public static final String DATABASE_NAME = "theaterDB";
 
@@ -82,31 +85,97 @@ public class JDB extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion >= 22 && oldVersion <= 24) {
-            if (oldVersion == 22) {
-                db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
-                        + COL_STATUS + " INTEGER DEFAULT 1");
+        try {
+            upgradeInternal(db, oldVersion);
+            AppLog.i(TAG, "Миграция БД " + oldVersion + " -> " + newVersion + " завершена");
+        } catch (Exception e) {
+            // никогда не оставляем БД в непригодном состоянии:
+            // при любом сбое миграции пересоздаём таблицы заново
+            AppLog.e(TAG, "Миграция БД " + oldVersion + " -> " + newVersion
+                    + " не удалась, пересоздаю таблицы", e);
+            try {
+                db.execSQL("DROP TABLE IF EXISTS " + TABLE_SESSIONS);
+                db.execSQL("DROP TABLE IF EXISTS " + TABLE_SUBSCRIBERS);
+                db.execSQL("DROP TABLE IF EXISTS " + TABLE_DELIVERIES);
+            } catch (Exception dropError) {
+                AppLog.e(TAG, "Не удалось удалить таблицы", dropError);
             }
-            if (oldVersion <= 23) {
-                db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
-                        + COL_FREE_SEATS + " INTEGER DEFAULT -1");
+            onCreate(db);
+        }
+    }
+
+    private void upgradeInternal(SQLiteDatabase db, int oldVersion) {
+        if (oldVersion >= 22) {
+            if (oldVersion <= 24) {
+                if (oldVersion == 22) {
+                    db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
+                            + COL_STATUS + " INTEGER DEFAULT 1");
+                }
+                if (oldVersion <= 23) {
+                    db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
+                            + COL_FREE_SEATS + " INTEGER DEFAULT -1");
+                }
+                db.execSQL("ALTER TABLE " + TABLE_SUBSCRIBERS + " ADD COLUMN "
+                        + COL_WANTS_DIGEST + " INTEGER DEFAULT 0");
             }
-            db.execSQL("ALTER TABLE " + TABLE_SUBSCRIBERS + " ADD COLUMN "
-                    + COL_WANTS_DIGEST + " INTEGER DEFAULT 0");
-        } else if (oldVersion < 22) {
+            if (oldVersion <= 25) {
+                AppLog.i(TAG, "Добавляю нормализованные колонки идентичности показов");
+                db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
+                        + COL_TITLE_NORM + " TEXT DEFAULT ''");
+                db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
+                        + COL_DATE_NORM + " TEXT DEFAULT ''");
+                backfillNorms(db);
+                dedupeSessions(db);
+            }
+        } else {
+            // старые версии: таблицы пересоздаются с нуля через onCreate
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_SESSIONS);
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_SUBSCRIBERS);
         }
-        if (oldVersion <= 25) {
-            db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
-                    + COL_TITLE_NORM + " TEXT DEFAULT ''");
-            db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
-                    + COL_DATE_NORM + " TEXT DEFAULT ''");
-            backfillNorms(db);
-            dedupeSessions(db);
-        }
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_DELIVERIES);
         onCreate(db);
+    }
+
+    @Override
+    public void onOpen(SQLiteDatabase db) {
+        super.onOpen(db);
+        // самовосстановление: если колонки идентичности по какой-то причине
+        // отсутствуют (прерванная миграция, повреждённая схема) — чиним на месте
+        try {
+            ensureNormColumns(db);
+        } catch (Exception e) {
+            AppLog.e(TAG, "Не удалось проверить/починить колонки идентичности", e);
+        }
+    }
+
+    private void ensureNormColumns(SQLiteDatabase db) {
+        boolean hasTitleNorm = false;
+        boolean hasDateNorm = false;
+        Cursor cursor = db.rawQuery("PRAGMA table_info(" + TABLE_SESSIONS + ")", null);
+        try {
+            int nameIdx = cursor.getColumnIndex("name");
+            while (cursor.moveToNext()) {
+                String name = cursor.getString(nameIdx);
+                if (COL_TITLE_NORM.equals(name)) hasTitleNorm = true;
+                if (COL_DATE_NORM.equals(name)) hasDateNorm = true;
+            }
+        } finally {
+            cursor.close();
+        }
+        if (hasTitleNorm && hasDateNorm) return;
+        AppLog.w(TAG, "Колонки идентичности отсутствуют, добавляю (title_norm="
+                + hasTitleNorm + ", date_norm=" + hasDateNorm + ")");
+        if (!hasTitleNorm) {
+            db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
+                    + COL_TITLE_NORM + " TEXT DEFAULT ''");
+        }
+        if (!hasDateNorm) {
+            db.execSQL("ALTER TABLE " + TABLE_SESSIONS + " ADD COLUMN "
+                    + COL_DATE_NORM + " TEXT DEFAULT ''");
+        }
+        backfillNorms(db);
+        dedupeSessions(db);
+        createIdentityIndex(db);
     }
 
     private void backfillNorms(SQLiteDatabase db) {
